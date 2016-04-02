@@ -1,0 +1,76 @@
+---
+title: "Dicas de visualizações"
+author: "Nazareno Andrade"
+date: "15 de março de 2016"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+require(ggplot2)
+require(GGally)
+require(dplyr)
+```
+
+Dados de atividade dos usuários do superuser, da plataforma stackexchange.
+
+```{r}
+su <- read.table("dados/superuser.txt") %>% select(2:4)
+names(su)<-c("A", "Q", "C")
+str(su)
+
+su.menores <- su[sample(NROW(su), 10000),]
+
+posgraduandos <- read.csv("dados//Dados de alunos para as aulas de FPCC-report.csv")
+posgraduandos <- posgraduandos %>% select(2, 3, 5, 6, 7, 9) %>% filter(complete.cases(posgraduandos))
+names(posgraduandos) <- c("curso", "sexo", "linguagens", "repositorios", "estatistica", "altura")
+```
+
+
+```{r}
+ggpairs(posgraduandos)
+
+ggplot(posgraduandos, aes(x = altura, y = confianca.em.estatistica)) + 
+  geom_point(alpha = 0.7, size = 4) + 
+  geom_rug(alpha = 0.4, size = 1) + 
+  theme_bw()
+```
+
+
+Dados muito muito skewed. 
+
+```{r}
+ggpairs(su.menores)
+summary(su.menores$A)
+
+su.ativos <- su.menores %>% filter(A > 0)
+
+ggplot(su.ativos, aes(x = A)) + 
+  geom_bar(binwidth = 1) + 
+  geom_rug()
+
+ggplot(su.ativos, aes(x = A)) + 
+  geom_histogram(binwidth = 1) + 
+  coord_trans(x = "log10")
+
+ggplot(su.ativos, aes(x = A)) + 
+  geom_freqpoly(binwidth = 1) + 
+  geom_rug() + 
+  coord_trans(x = "log10")
+
+su.ativos <- arrange(su.ativos, -A)
+ggplot(su.ativos, aes(x = 1:NROW(su.ativos), y = A)) + 
+  geom_point() + 
+  scale_x_log10() + 
+  scale_y_log10() + 
+  xlab("User rank") + 
+  ylab("Answers")
+
+```
+
+```{r}
+ggplot(su.menores, aes(x = A + 1)) + 
+  geom_density(adjust = 5) + 
+  scale_x_log10()
+
+```
+

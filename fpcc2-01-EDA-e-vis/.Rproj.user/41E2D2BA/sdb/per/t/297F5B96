@@ -1,0 +1,17 @@
+{
+    "contents" : "\nload_github_wide <- function(){\n  d <- read.csv(\"dados/atividade-no-github-archive-2012-2015.csv\", stringsAsFactors = TRUE)\n  \n  # Somente o que queremos. E usaremos eventos/repo\n  d$events <- d$events / d$active_repos_by_url\n  d <- filter(d, year == 2014, quarter == 1, type != \"CreateEvent\") %>% \n    select(-active_repos_by_url, -year, -quarter)\n  d$type <- droplevels(d$type)\n  \n  dw <- dcast(d, repository_language ~ type, value.var = \"events\")\n  dw <- filter(dw, complete.cases(dw))\n  return(dw)\n}",
+    "created" : 1459444509065.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2643433007",
+    "id" : "297F5B96",
+    "lastKnownWriteTime" : 1459639329,
+    "path" : "~/workspace/fpcc2-01-vars-escalas/github-lib.R",
+    "project_path" : "github-lib.R",
+    "properties" : {
+        "tempName" : "Untitled2"
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}

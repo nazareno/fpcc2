@@ -1,0 +1,17 @@
+{
+    "contents" : "---\ntitle: \"pca\"\nauthor: \"Nazareno Andrade\"\ndate: \"30 de março de 2016\"\noutput: html_document\n---\n\n```{r, message=FALSE, warning=FALSE}\nrequire(ggplot2, quietly = TRUE)\nlibrary(ggfortify, quietly = TRUE)\n# http://rpubs.com/sinhrks/basics\nrequire(GGally, quietly = TRUE)\nrequire(reshape2, quietly = TRUE)\nrequire(dplyr, quietly = TRUE)\nlibrary(knitr, quietly = TRUE)\nlibrary(cluster)\nlibrary(ggdendro)\ntheme_set(theme_bw())\nsource(\"github-lib.R\")\n```\n\n\n# Github data\n\n```{r}\ndw <- load_github_wide()\n#write.csv(dw, \"github-20141.csv\", row.names = FALSE)\nsummary(dw)\n\ndw <- dw %>% \n  filter(PushEvent < 50, IssuesEvent < 50, ForkEvent < 18)\n\nggpairs(select(dw, -repository_language))\n```\n\nAs variáveis são bastante assimétricas e concentradas em pequenos valores. Transformá-las para log ajuda na visualização.\n\n```{r}\n# Escala de log \ndw2 <- log(dw[,2:5])\ndw2$repository_language <- dw$repository_language\nggpairs(select(dw2, -repository_language))\n```\n\n----\n\n## PCA\n\n```{r}\nrow.names(dw2) = dw2$repository_language\n# scale()\npr.out = prcomp(select(dw2, -repository_language), scale = TRUE) \n\nkable(pr.out$rotation)\nbiplot(pr.out, scale = 0)\n\nautoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE)\n\nautoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE, \n         loadings = TRUE, loadings.colour = 'blue',\n         loadings.label = TRUE, loadings.label.size = 3)\n\n# Porcentagem da variância explicada: \nplot_pve <- function(prout){\n  pr.var <- pr.out$sdev^2\n  pve <- pr.var / sum(pr.var)\n  df = data.frame(x = 1:NROW(pve), y = cumsum(pve))\n  ggplot(df, aes(x = x, y = y)) + \n    geom_point(size = 3) + \n    geom_line() + \n    labs(x='Principal Component', y = 'Cumuative Proportion of Variance Explained')\n}\n\nplot_pve(pr.out)\n```\n\n## t-SNE\n\n```{r}\nrequire(Rtsne)\ntsne.out = Rtsne(select(dw, -repository_language), \n                 verbose = TRUE)\n\ndf = as.data.frame(tsne.out$Y)\ndf$repository_language = dw$repository_language\n\nggplot(df, aes(x = V1, y = V2, label = repository_language)) + \n  geom_point(alpha = 0.8, size = 3, color = \"tomato\") \n\nggplot(df, aes(x = V1, y = V2, label = repository_language)) + \n  geom_point(alpha = 0.2, size = 3, color = \"tomato\") + \n  geom_text(alpha = .7, size = 4, hjust = -.2)\n\n```\n\n\n-----\n\n# Prisões nos EUA\n\n```{r}\nstr(USArrests)\nrow.names(USArrests)\n\npr.out <- prcomp(USArrests, scale=TRUE)\nbiplot(pr.out)\n\nautoplot(pr.out, label = TRUE)\n\nplot_pve(pr.out)\n```\n\n\n----\n## Iris\n\n```{r}\nnames(iris)\nstr(iris)\n\nggpairs(iris)\n\npr.out <- prcomp(select(iris, -Species), scale=TRUE)\n\nautoplot(pr.out, data = iris, colour = 'Species', size = 3,  \n         loadings = TRUE, loadings.colour = 'blue',\n         loadings.label = TRUE, loadings.label.size = 3)\n\nplot_pve(pr.out)\n```\n\n",
+    "created" : 1459389782983.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1690388361",
+    "id" : "2D227922",
+    "lastKnownWriteTime" : 1459639762,
+    "path" : "~/workspace/fpcc2-01-vars-escalas/pca.Rmd",
+    "project_path" : "pca.Rmd",
+    "properties" : {
+        "tempName" : "Untitled2"
+    },
+    "source_on_save" : false,
+    "type" : "r_markdown"
+}
