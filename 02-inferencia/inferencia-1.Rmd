@@ -1,0 +1,287 @@
+---
+title: "Inferência por reamostragem e permutação"
+author: "Nazareno Andrade"
+date: "16 de abril de 2016"
+output: 
+  html_document:
+    theme: readable
+    fig_width: 7
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(GGally)
+library(dplyr)
+theme_set(theme_bw())
+```
+
+# Significância
+
+## Exemplo 1: moeda
+
+Jogamos 17 vezes, foi 2 vezes apenas cara. Temos evidência de que essa moeda é injusta? 
+
+Decisão: o acontecido é improvável o suficiente numa moeda justa para que digamos que esta moeda é injusta?
+
+Hipótese: a moeda é injusta. Hipótese nula: a moeda não é injusta. 
+
+Quantas vezes conseguimos 15 ou mais coroas se jogamos a moeda muitas muitas vezes?
+
+```{r }
+observado_coroas = 15
+lancamentos = 17
+probabilidade_coroa = .5
+
+numero_jogadas = 10000
+
+# Retorna o numero de vezes que um evento de 
+# probabilidade p aconteceu em n tentativas
+repete_experimento = function(p, n){
+  sorteios = runif(n, min = 0, max = 1)  
+  return(length(which(sorteios < p)))
+}
+
+num_experimentos = 10000
+experimentos = data_frame(i = 1:num_experimentos)
+experimentos = experimentos %>% 
+  rowwise() %>% 
+  mutate(coroas = repete_experimento(probabilidade_coroa, lancamentos))
+
+ggplot(experimentos, aes(x = coroas)) + 
+  geom_histogram(binwidth = 1, colour = "black", fill = "white")
+
+quantas_aconteceram = length(which(experimentos$coroas >= observado_coroas))
+probabilidade = quantas_aconteceram / num_experimentos
+
+quantas_aconteceram
+probabilidade
+```
+
+Em `r quantas_aconteceram` de `r num_experimentos` rodadas observamos `r observado_coroas` ou mais coroas em `r lancamentos` lançamentos. A probabilidade de `r observado_coroas` acontecer aleatoriamente é portanto `r probabilidade`.
+
+## Exemplo 2: tratamento
+
+Dados: 
+
+```{r}
+experimento = data_frame(tratamento= "placebo", melhora = c(54, 51, 58, 44, 55, 52, 42, 47, 58, 46))
+experimento = rbind(experimento, data_frame(tratamento = "droga", melhora = c(54, 73, 53, 70, 73, 68, 52, 65, 65)))
+experimento$tratamento = factor(experimento$tratamento)
+ggpairs(experimento)
+
+# melhora observada como média: 
+medias = experimento %>% 
+  group_by(tratamento) %>% 
+  summarise(media = mean(melhora))
+melhora_media = medias[1, "media"] - medias[2, "media"]
+print(paste("Melhora na média observada:", melhora_media))
+```
+
+Pergunta: houve uma melhora significativamente maior nos pacientes que usaram a droga? 
+
+Resposta: quantas vezes aconteceria se a relação entre tratamento e melhora fosse completamente aleatória? 
+
+```{r}
+# Retorna a diferença nas médias entre o grupos de y
+# nos índices com valor de x igual a baseline após embaralhar x.
+repete_experimento_de_diff = function(x, y, baseline){
+  embaralhado = x[sample(NROW(x))]
+  baseline_mean = mean(y[which(embaralhado == baseline)])
+  other_mean = mean(y[which(embaralhado != baseline)])
+  return(other_mean - baseline_mean)
+}
+
+num_experimentos = 10000
+experimentos = data_frame(i = 1:num_experimentos)
+experimentos = experimentos %>% 
+  rowwise() %>% 
+  mutate(diferenca = repete_experimento_de_diff(experimento$tratamento, experimento$melhora, "placebo"))
+
+ggplot(experimentos, aes(x = diferenca)) + 
+  geom_histogram(binwidth = 1, colour = "darkblue", fill = "white")
+summary(experimentos)
+
+quantas_aconteceram = length(which(experimentos$diferenca >= melhora_media$media))
+probabilidade = quantas_aconteceram / num_experimentos
+
+quantas_aconteceram
+probabilidade
+```
+
+Mesma lógica pode ser aplicada para a mediana. Para o 3o quartil, para o desvio padrão... 
+(Mas não para tudo, infelizmente)
+
+# Relevância / importância
+
+A diferença é significativa. Mas ela é importante / relevante? 
+
+Para responder, precisamos entender que diferença esperamos se repetirmos o experimento. Construir uma estimativa do intervalo onde esperamos que a diferença esteja em x% repetições. Isso é, um Intervalo de Confiança com uma confiança x.
+
+Para fazer isso, precisamos de várias amostras vindas da mesma população de pessoas que tomaram placebo e tomaram melhoras. E aqui é o pulo do gato: é possível estimar essa população usando a própria amostra. Isso se chama bootstrapping.
+
+Importante: Bootstrapping precisa de um pouco mais de dados do que temos neste exemplo. Aqui usamos os mesmos apenas pra simplificar a apresentação.
+
+```{r}
+repeticoes = 10000 # pelo menos 1000, mas mais não faz mal.
+
+exp_com_bootstrap <- function(x, y){
+  boot_x <- sample(x, size = NROW(x), replace = TRUE) # aqui é o bootstrap
+  boot_y <- sample(y, size = NROW(y), replace = TRUE) # de novo!
+  return(mean(boot_x) - mean(boot_y))
+}
+
+experimentos = data_frame(i = 1:repeticoes)
+experimentos = experimentos %>% 
+  rowwise() %>% 
+  mutate(diferenca = exp_com_bootstrap(experimento[experimento$tratamento != "placebo",]$melhora, 
+                                       experimento[experimento$tratamento == "placebo",]$melhora))
+
+ggplot(experimentos, aes(x = diferenca)) + 
+  geom_histogram(binwidth = 1, colour = "darkorange", fill = "white")
+summary(experimentos)
+
+# IC com 90%: 
+alpha = .1
+quantile(experimentos$diferenca, probs = c(alpha/2, 1 - alpha/2))
+
+# IC com 95%: 
+alpha = .05
+quantile(experimentos$diferenca, probs = c(alpha/2, 1 - alpha/2))
+```
+
+# Sobre o uso de reamostragem (ressampling) e bootsraping
+
+Estimar o intervalo de confiança via bootstrap não é recomendado para amostras pequenas (n < 100). Nesses casos, testes de significância com permutação são mais adequados. Eles funcionam para n >= 3 de cada categoria.
+
+Significância complementa o cálculo de ICs nessa abordagem. Por exemplo, pense no caso onde há uma observação no grupo 1 e uma no grupo 2. Há IC mas não há significância. 
+
+Não use bootstrap para estimar o máximo, mínimo ou o n-ésimo maior/menor valor. Mas use para percentis.
+
+Como sempre, cuidado com outliers. 
+
+# Com um pacote
+
+```{r}
+# install.packages("resample")
+library(resample)
+
+permutationTest2(experimento, mean(melhora), treatment = tratamento)
+
+b = bootstrap(experimento$melhora, mean)
+CI.percentile(b, probs = c(.025, .975))
+
+b2 = bootstrap2(experimento, mean(melhora), treatment = tratamento)
+CI.percentile(b2, probs = c(.025, .975))
+
+b2.median = bootstrap2(experimento, median(melhora), treatment = tratamento)
+CI.percentile(b2.median, probs = c(.025, .975))
+```
+
+
+# Estatísticas via reamostragem e bootstrapping vs. métodos clássicos
+
+Um exemplo com muitos dados:
+
+```{r}
+lastfm = read.csv("expererimento-latfm.csv")
+str(lastfm)
+
+lastfm = select(lastfm, news, ecletic)
+
+lastfm %>% ggplot(aes(news)) + geom_histogram(binwidth = 10)
+lastfm %>% ggplot(aes(ecletic)) + geom_histogram(binwidth = 100)
+```
+
+Imaginemos que essa é a população. 
+
+## Método clássico
+
+```{r}
+sample(lastfm$news, 100) %>% mean()
+
+# Média de 200 amostras com n = 100
+dist_original = lastfm$news
+sample_size <- 50
+num_samples <- 100
+
+samples_means <- c()
+for(i in seq(1, num_samples)){
+  a_sample <- sample(dist_original, sample_size)
+  samples_means[i] <- mean(a_sample)
+}
+ggplot(data.frame(samples_means), aes(samples_means)) + geom_histogram()
+```
+
+É uma normal. E repare que a distribuição original era muito diferente disso. Esta é a *distribuição das médias das amostras*.
+
+Temos do Teorema do limite central que a distribuição de amostragem é uma distribuição normal com a média da população e um desvio padrão de $\sigma = s / \sqrt{n}$ (s é o desvio padrão da amostra, usado no lugar do desvio padrão da população, que não temos). Chamamos o desvio padrão da distribuição amostral de erro padrão (standard errror).
+
+O código para a versão forma fechada, que usa o teorema do limite central: 
+```{r}
+CI
+```
+
+Ela funciona bem para amostras grandes e/ou distribuições que não sejam gravemente skewed / assimétricas.
+
+O experimento para explorar isso é o seguinte: se conhecemos a população, e repetimos 100 vezes o processo de a partir de uma amostra, estimar o intervalo de confiança da média com uma confiança de 95%,espermos que nossa estimativa inclua a média da população em 95 das 100 repetições. Ou mais. Se ela inclui menos, o erro está sendo maior que o esperado. 
+
+Usando uma variável mais assimétrica (no nosso caso, news) e uma amostra não muito grande (eg. n = 50), observamos isso. 
+
+```{r, fig.width=9}
+library("Rmisc", quietly = T)
+library(dplyr)
+
+pop_mean <- mean(dist_original)
+
+sample_cis <- data.frame(upper = c(), mean = c(), lower = c())
+for(i in seq(1, num_samples)){
+  a_sample <- sample(dist_original, sample_size)
+  interval <- CI(a_sample, ci = 0.95)
+  sample_cis <- rbind(sample_cis, data.frame(mean = interval["mean"], 
+                                             lower = interval["lower"], 
+                                             upper = interval["upper"]))
+}
+sample_cis <- sample_cis %>% 
+  mutate(contains_pop_mean = (upper >= pop_mean & lower <= pop_mean)) 
+
+# Demooooora...
+boot_cis <- data.frame(upper = c(), mean = c(), lower = c())
+for(i in seq(1, num_samples)){
+  a_sample <- sample(dist_original, sample_size)
+  interval <- CI.percentile(bootstrap(a_sample, mean, R = 1000))
+  boot_cis <- rbind(boot_cis, data.frame(mean = mean(interval), 
+                                         lower = interval[1], 
+                                         upper = interval[2]))
+}
+
+boot_cis <- boot_cis %>% 
+  mutate(contains_pop_mean = (upper >= pop_mean & lower <= pop_mean)) 
+
+sample_cis %>% 
+  ggplot(aes(x = 1:nrow(sample_cis), y = mean, colour = contains_pop_mean)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
+  geom_hline(aes(yintercept=mean(mean(dist_original))))
+
+boot_cis %>% 
+  ggplot(aes(x = 1:nrow(sample_cis), y = mean, colour = contains_pop_mean)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
+  geom_hline(aes(yintercept=mean(mean(dist_original))))
+
+```
+
+um applet (!) legal: [http://www.stat.berkeley.edu/~stark/Java/Html/Ci.htm]
+
+ggplot(iris, aes(x = Species, y = Sepal.Length)) + 
+  stat_summary(fun.y = mean, geom = "point") + 
+  stat_summary(fun.data = mean_cl_boot, geom = "errorbar", colour = "blue", width = 0.2)
+
+
+## Sobre sobreposições de barras de erro
+
+[http://scienceblogs.com/cognitivedaily/2008/07/31/most-researchers-dont-understa-1/] 
+
