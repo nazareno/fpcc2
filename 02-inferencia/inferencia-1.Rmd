@@ -31,8 +31,9 @@ Hipótese: a moeda é injusta. Hipótese nula: a moeda não é injusta.
 Quantas vezes conseguimos 15 ou mais coroas se jogamos a moeda muitas muitas vezes?
 
 ```{r }
-observado_coroas = 15
 lancamentos = 17
+observado_coroas = 15
+
 probabilidade_coroa = .5
 
 numero_jogadas = 10000
@@ -44,7 +45,7 @@ repete_experimento = function(p, n){
   return(length(which(sorteios < p)))
 }
 
-num_experimentos = 10000
+num_experimentos = 1e4
 experimentos = data_frame(i = 1:num_experimentos)
 experimentos = experimentos %>% 
   rowwise() %>% 
@@ -67,7 +68,8 @@ Em `r quantas_aconteceram` de `r num_experimentos` rodadas observamos `r observa
 Dados: 
 
 ```{r}
-experimento = data_frame(tratamento= "placebo", melhora = c(54, 51, 58, 44, 55, 52, 42, 47, 58, 46))
+experimento = data_frame(tratamento= "placebo", 
+                         melhora = c(54, 51, 58, 44, 55, 52, 42, 47, 58, 46))
 experimento = rbind(experimento, data_frame(tratamento = "droga", melhora = c(54, 73, 53, 70, 73, 68, 52, 65, 65)))
 experimento$tratamento = factor(experimento$tratamento)
 ggpairs(experimento)
@@ -98,7 +100,9 @@ num_experimentos = 10000
 experimentos = data_frame(i = 1:num_experimentos)
 experimentos = experimentos %>% 
   rowwise() %>% 
-  mutate(diferenca = repete_experimento_de_diff(experimento$tratamento, experimento$melhora, "placebo"))
+  mutate(diferenca = repete_experimento_de_diff(experimento$tratamento,
+                                                experimento$melhora,
+                                                "placebo"))
 
 ggplot(experimentos, aes(x = diferenca)) + 
   geom_histogram(binwidth = 1, colour = "darkblue", fill = "white")
@@ -145,6 +149,8 @@ summary(experimentos)
 
 # IC com 90%: 
 alpha = .1
+quantile(experimentos$diferenca, 
+         probs = c(.05, .95))
 quantile(experimentos$diferenca, probs = c(alpha/2, 1 - alpha/2))
 
 # IC com 95%: 
@@ -152,7 +158,7 @@ alpha = .05
 quantile(experimentos$diferenca, probs = c(alpha/2, 1 - alpha/2))
 ```
 
-# Sobre o uso de reamostragem (ressampling) e bootsraping
+# Sobre o uso de reamostragem (ressampling) e bootstraping
 
 Estimar o intervalo de confiança via bootstrap não é recomendado para amostras pequenas (n < 100). Nesses casos, testes de significância com permutação são mais adequados. Eles funcionam para n >= 3 de cada categoria.
 
@@ -186,7 +192,7 @@ CI.percentile(b2.median, probs = c(.025, .975))
 Um exemplo com muitos dados:
 
 ```{r}
-lastfm = read.csv("expererimento-latfm.csv")
+lastfm = read.csv("dados/experimento-lastfm.csv")
 str(lastfm)
 
 lastfm = select(lastfm, news, ecletic)
@@ -197,14 +203,35 @@ lastfm %>% ggplot(aes(ecletic)) + geom_histogram(binwidth = 100)
 
 Imaginemos que essa é a população. 
 
+```{r}
+# install.packages("resample")
+library(resample)
+
+b = bootstrap(lastfm$news, mean)
+CI.percentile(b, probs = c(.025, .975))
+
+
+permutationTest2(experimento, mean(melhora), treatment = tratamento)
+
+b = bootstrap(experimento$melhora, median)
+CI.percentile(b, probs = c(.025, .975))
+
+b2 = bootstrap2(experimento, mean(melhora), treatment = tratamento)
+CI.percentile(b2, probs = c(.025, .975))
+
+b2.median = bootstrap2(experimento, median(melhora), treatment = tratamento)
+CI.percentile(b2.median, probs = c(.025, .975))
+```
+
+
 ## Método clássico
 
 ```{r}
 sample(lastfm$news, 100) %>% mean()
 
-# Média de 200 amostras com n = 100
+# Média de num_samples amostras com n = sample_size
 dist_original = lastfm$news
-sample_size <- 50
+sample_size <- 200
 num_samples <- 100
 
 samples_means <- c()
@@ -212,7 +239,7 @@ for(i in seq(1, num_samples)){
   a_sample <- sample(dist_original, sample_size)
   samples_means[i] <- mean(a_sample)
 }
-ggplot(data.frame(samples_means), aes(samples_means)) + geom_histogram()
+ggplot(data.frame(samples_means), aes(samples_means)) + geom_histogram(binwidth = 2)
 ```
 
 É uma normal. E repare que a distribuição original era muito diferente disso. Esta é a *distribuição das médias das amostras*.
@@ -221,7 +248,7 @@ Temos do Teorema do limite central que a distribuição de amostragem é uma dis
 
 O código para a versão forma fechada, que usa o teorema do limite central: 
 ```{r}
-CI
+#CI
 ```
 
 Ela funciona bem para amostras grandes e/ou distribuições que não sejam gravemente skewed / assimétricas.
