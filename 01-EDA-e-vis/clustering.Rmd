@@ -44,16 +44,18 @@ dw2.scaled = select(dw2, -repository_language) %>%
 
 
 ```{r}
+row.names(dw2.scaled)  = dw2$repository_language
 dists = dist(dw2.scaled, method = "euclidean")
 hc = hclust(dists, method = "ward.D")
 
+plot(hc, cex = .6)
 plot(hc, hang = -1)
 rect.hclust(hc, k=6)
 
-dw2$cluster = factor(cutree(hc, k=6))
+dw2$cluster = factor(cutree(hc, k=5))
 
 dw2.scaled$repository_language = dw2$repository_language
-dw2.scaled$cluster = factor(cutree(hc, k=6))
+dw2.scaled$cluster = factor(cutree(hc, k=5))
 
 dw2.long = melt(dw2.scaled, id.vars = c("repository_language", "cluster"))
 
@@ -73,7 +75,7 @@ toclust = select(dw2.scaled, 1:4)
 row.names(toclust) = dw2.scaled$repository_language
 dists = dist(toclust)
 
-km <- kmeans(toclust, centers = 6, nstart = 10)
+km <- kmeans(toclust, centers = 5, nstart = 10)
 
 autoplot(km, data = dw2.scaled, size = 3)
 autoplot(km, data = dw2.scaled, label = TRUE)
@@ -88,6 +90,8 @@ ggplot(dw2.long, aes(x = variable, y = value, colour = variable)) +
   facet_wrap(~ kmcluster) 
 
 table(dw2.scaled$kmcluster)
+
+plot(silhouette(dw2.scaled$kmcluster, dists))
 
 dw2.scaled[dw2.scaled$kmcluster == '1',]$repository_language
 
@@ -107,8 +111,9 @@ str(ruspini)
 ggplot(ruspini, aes(x = x, y = y)) + 
   geom_point(size = 3)
 
-colMeans(ruspini)
+summary(ruspini)
 
+rs <- data.frame((ruspini))
 rs <- data.frame(scale(ruspini))
 colMeans(rs)
 
@@ -123,7 +128,7 @@ ggplot(rs, aes(x = x, y = y)) +
 dists = dist(rs, method = "euclidean")
 hc = hclust(dists, method = "ward.D")
 
-plot(hc, hang = -1)
+plot(hc, hang = -1, cex = 0.8)
 
 rect.hclust(hc, k=4)
 
@@ -138,6 +143,7 @@ ggplot(rs, aes(x = x, y = y, colour = cluster, label = cluster)) +
   geom_text(hjust = -.1, vjust = 1)
 
 plot(silhouette(cutree(hc, k = 4), dists))
+plot(silhouette(cutree(hc, k = 6), dists))
 
 #heatmap(as.matrix(dw2[,1:4]), Colv=F, scale='none')
 #hc.data <- dendro_data(hc)
@@ -148,7 +154,7 @@ plot(silhouette(cutree(hc, k = 4), dists))
 ## K-means
 
 ```{r}
-km <- kmeans(rs, centers=4, nstart=10)
+km <- kmeans(rs, centers=8, nstart=10)
 km
 
 autoplot(km, data = rs)
