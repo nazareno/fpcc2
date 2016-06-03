@@ -164,15 +164,37 @@ pvalue(wt)
 
 # Categórica x categórica
 
-```{r}
-titanic = read.csv("dados/titanic.csv")
-titanic = titanic %>% mutate(Survived = as.factor(Survived), Pclass = as.factor(Pclass))
-```
-
 ## Chi-squared
 
 ```{r}
+titanic = read.csv("dados/titanic.csv")
+titanic = titanic %>% mutate(Survived = as.factor(Survived), Pclass = as.factor(Pclass))
+table(titanic$Survived, titanic$Pclass)
+
 chisq.test(titanic$Survived, titanic$Pclass, simulate.p.value = TRUE)
+
+library(gmodels)
+CrossTable(titanic$Survived, titanic$Pclass)
+mosaic(table(titanic$Survived, titanic$Pclass), shade = TRUE)
+```
+
+Outro
+
+```{r}
+titanic <- read.csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter09/chap09f1.1Titanic.csv"))
+head(titanic)
+titanicTable <- table(titanic$survival, titanic$sex)
+addmargins(titanicTable)
+
+mosaicplot(t(titanicTable), 
+           cex.axis = 1, 
+           sub = "Sex", 
+           ylab = "Relative frequency", main = "")
+
+library(vcd)
+mosaic(table(titanic$survival, titanic$sex))
+mosaic(HairEyeColor, shade = TRUE)
+chisq.test(titanic$sex, titanic$survival, simulate.p.value = TRUE)
 ```
 
 
