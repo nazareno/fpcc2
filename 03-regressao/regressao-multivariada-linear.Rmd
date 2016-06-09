@@ -1,0 +1,182 @@
+---
+title: "regressao linear multivariada"
+author: "Nazareno Andrade"
+output: 
+  html_document:
+    theme: readable
+    fig_width: 7
+    toc: true
+    toc_float: true
+
+---
+
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+library(GGally)
+library(ggfortify)
+library(dplyr)
+library(broom)
+require(ISLR)
+```
+
+# Os dados
+
+```{r}
+advertising = read.csv("data/Advertising.csv", row.names=1)
+
+ggpairs(advertising, alpha = 0.7)
+```
+
+# Uma regressão linear simples 
+
+Modelo da relação entre gasto com TV e vendas:
+
+```{r}
+advertising$TVsqrt = sqrt(advertising$TV)
+tv.model = lm(Sales ~ TVsqrt, data = advertising)
+
+tidy(tv.model, conf.int = TRUE)
+glance(tv.model, conf.int = TRUE)
+
+summary(tv.model)
+```
+
+```{r}
+ggplot(advertising, aes(x = sqrt(TV), y = Sales)) + 
+  geom_point(alpha = 0.4) + 
+  geom_line(aes(y = predict(tv.model, advertising)), colour = "red")
+
+autoplot(tv.model)
+
+ggplot(advertising, aes(x = log(TV), y = log(Sales))) + 
+  geom_point(alpha = 0.4)
+```
+
+Os resíduos dão sinal de não linearidade. Voltamos para falar de diagnóstico e consertos mais na frente.
+
+# Colocando mais variáveis como preditoras
+
+```{r}
+radio.model = lm(Sales ~ Radio, data = advertising)
+tidy(radio.model, conf.int = TRUE)
+glance(radio.model, conf.int = TRUE)
+```
+
+```{r}
+np.model = lm(Sales ~ Newspaper, data = advertising)
+tidy(np.model, conf.int = TRUE)
+glance(np.model, conf.int = TRUE)
+```
+
+Considerando os preditores ao mesmo tempo. Isso é diferente de considerá-los separadamente:
+
+```{r}
+multi = lm(Sales ~ TV + Newspaper + Radio, data = advertising)
+tidy(multi, conf.int = TRUE)
+glance(multi)
+```
+
+Repare na diferença nas significâncias dos preditores para os modelos univariados e para o multivariado.
+
+Algumas perguntas que queremos responder: 
+
+* O modelo considerando esses preditores é útil em explicar a resposta?
+* Todos os preditores contribuem para explicar a resposta, ou apenas algum?
+* Quão bem ajustado aos dados o modelo está?
+
+# Interações não aditivas
+
+```{r}
+multi = lm(Sales ~ TV + Radio + Radio*TV, data = advertising)
+tidy(multi, conf.int = TRUE)
+glance(multi)
+
+autoplot(multi)
+
+predict(multi, 
+        data.frame(Radio = 10e3, TV = 20e3, Newspaper = 0), 
+        interval = "predict")
+```
+
+# Preditores categóricos 
+
+```{r}
+mario <- read.csv("marioKart.txt", header = TRUE, sep = "\t")
+names(mario)
+
+ggpairs(select(mario, totalPr, cond, startPr, nBids))
+mario <- filter(mario, totalPr < 100)
+
+mlm <- lm(totalPr ~ cond, data = mario)
+summary(mlm)
+
+ggplot(mario, aes(x = cond, y = totalPr, group = 1)) + 
+  geom_violin(aes(group = cond), alpha = 0.2) + 
+  geom_point(position = position_jitter(width = 0.1), alpha = 0.6) + 
+  geom_smooth(method = "lm", se = F)
+```
+
+Ambas juntas
+
+```{r}
+mlm <- lm(totalPr ~ startPr + cond, data = mario)
+tidy(mlm, conf.int = TRUE)
+glance(mlm)
+```
+
+# Problemas possíveis
+
+1. Non-linearity of the response-predictor relationships. 
+2. Correlation of error terms.
+3. Non-constant variance of error terms.
+4. Outliers.
+5. High-leverage points.
+6. Collinearity.
+
+## Não linearidade na response-predictor relationship
+
+```{r}
+auto = select(Auto, mpg, horsepower)
+ggpairs(auto)
+automodel = lm(mpg ~ horsepower, data = auto)
+tidy(automodel)
+glance(automodel)
+autoplot(automodel)
+```
+
+```{r}
+automodel = lm(mpg ~ horsepower + I(horsepower^2), data = auto)
+tidy(automodel)
+glance(automodel)
+autoplot(automodel)
+```
+
+##  Non-constant variance of error terms
+
+Transformações ou weighted least squares
+
+## Outliers e High-leverage points
+
+![outliers](others-figs//3.12.pdf)
+
+![leverage](others-figs//3.13.pdf)
+
+## Colinearity
+
+![colinearidade](others-figs//3.14.pdf)
+
+Recomendação: VIF < 5 ou VIF < 10
+
+```{r}
+library(car)
+vif(multi)
+vif(mlm)
+```
+
+```{r}
+credit <- read.csv("data/Credit.csv", row.names=1)
+names(credit)
+#credit.model = lm(Balance ~ Age + Rating + Limit, data = credit)
+```
+
