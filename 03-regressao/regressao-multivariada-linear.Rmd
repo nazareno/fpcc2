@@ -103,9 +103,9 @@ predict(multi,
 
 ```{r}
 mario <- read.csv("marioKart.txt", header = TRUE, sep = "\t")
-names(mario)
+str(mario)
 
-ggpairs(select(mario, totalPr, cond, startPr, nBids))
+ggpairs(select(mario, totalPr, cond, log(startPr +1), nBids))
 mario <- filter(mario, totalPr < 100)
 
 mlm <- lm(totalPr ~ cond, data = mario)
@@ -123,6 +123,20 @@ Ambas juntas
 mlm <- lm(totalPr ~ startPr + cond, data = mario)
 tidy(mlm, conf.int = TRUE)
 glance(mlm)
+
+library(tidyr)
+library(modelr) # devtools::install_github("hadley/modelr")
+
+m = mario %>% expand(startPr, cond)
+grid = m %>% 
+  add_predictions(totalPr = mlm)
+
+ggplot(mario, aes(startPr, totalPr)) + 
+  geom_point() + 
+  facet_wrap(~cond) + 
+  geom_line(data = grid, colour = "red", size = 1) 
+
+autoplot(mlm)
 ```
 
 # Problemas possíveis
