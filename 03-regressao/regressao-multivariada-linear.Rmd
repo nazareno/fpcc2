@@ -87,6 +87,8 @@ Algumas perguntas que queremos responder:
 
 # Interações não aditivas
 
+# TODO como modelar interações quando espero que o efeito tenha sinais diferentes?
+
 ```{r}
 multi = lm(Sales ~ TV + Radio + Radio*TV, data = advertising)
 tidy(multi, conf.int = TRUE)
@@ -105,7 +107,7 @@ predict(multi,
 mario <- read.csv("marioKart.txt", header = TRUE, sep = "\t")
 str(mario)
 
-ggpairs(select(mario, totalPr, cond, log(startPr +1), nBids))
+ggpairs(select(mario, totalPr, cond, startPr, nBids))
 mario <- filter(mario, totalPr < 100)
 
 mlm <- lm(totalPr ~ cond, data = mario)
@@ -138,6 +140,27 @@ ggplot(mario, aes(startPr, totalPr)) +
 
 autoplot(mlm)
 ```
+
+```{r}
+mlm <- lm(totalPr ~ shipSp, data = mario)
+tidy(mlm, conf.int = TRUE)
+glance(mlm)
+
+library(tidyr)
+library(modelr) # devtools::install_github("hadley/modelr")
+
+m = mario %>% expand(startPr, cond)
+grid = m %>% 
+  add_predictions(totalPr = mlm)
+
+ggplot(mario, aes(startPr, totalPr)) + 
+  geom_point() + 
+  facet_wrap(~cond) + 
+  geom_line(data = grid, colour = "red", size = 1) 
+
+autoplot(mlm)
+```
+
 
 # Problemas possíveis
 
