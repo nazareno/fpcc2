@@ -15,9 +15,12 @@ library(ggplot2)
 theme_set(theme_bw())
 library(GGally)
 library(ggfortify)
-library(dplyr)
 library(broom)
 require(ISLR)
+library(dplyr)
+library(tidyr)
+library(modelr) # devtools::install_github("hadley/modelr")
+
 ```
 
 # Os dados
@@ -146,9 +149,6 @@ mlm <- lm(totalPr ~ shipSp, data = mario)
 tidy(mlm, conf.int = TRUE)
 glance(mlm)
 
-library(tidyr)
-library(modelr) # devtools::install_github("hadley/modelr")
-
 m = mario %>% expand(startPr, cond)
 grid = m %>% 
   add_predictions(totalPr = mlm)
@@ -173,31 +173,132 @@ autoplot(mlm)
 
 ## Não linearidade na response-predictor relationship
 
+### Caso 1
+
 ```{r}
 auto = select(Auto, mpg, horsepower)
 ggpairs(auto)
 automodel = lm(mpg ~ horsepower, data = auto)
+tidy(automodel, conf.int = TRUE)
+glance(automodel)
+
+m = auto %>% expand(horsepower)
+grid = m %>% 
+  add_predictions(mpg = automodel)
+
+ggplot(auto, aes(horsepower, mpg)) + 
+  geom_point(alpha = .8) + 
+  geom_line(data = grid, colour = "red", size = 1) 
+
+autoplot(automodel)
+```
+
+Uma solução possível é tentar polinômios de grau mais alto, que têm curva.
+
+```{r}
+ggpairs(auto)
+automodel = lm(mpg ~ horsepower + I(horsepower^2), data = auto)
+
+m = auto %>% expand(horsepower, horsepower^2)
+grid = m %>% 
+  add_predictions(mpg = automodel)
+
+ggplot(auto, aes(horsepower, mpg)) + 
+  geom_point(alpha = .8) + 
+  geom_line(data = grid, colour = "red", size = 1) 
+
 tidy(automodel)
 glance(automodel)
 autoplot(automodel)
 ```
 
+### Caso 2:
+
+(Na minha experiência, esse é mais comum)
+
 ```{r}
-automodel = lm(mpg ~ horsepower + I(horsepower^2), data = auto)
-tidy(automodel)
-glance(automodel)
-autoplot(automodel)
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(alpha = .3)
+
+caratmodel = lm(price ~ carat, data = diamonds)
+
+m = diamonds %>% expand(carat)
+grid = m %>% 
+  add_predictions(price = caratmodel)
+
+ggplot(diamonds, aes(carat, price)) + 
+  geom_point(alpha = .1) + 
+  geom_line(data = grid, colour = "red", size = 1) 
+
+autoplot(caratmodel)
 ```
+
+Solução: Transformar as variáveis para que elas passem a ter uma relação mais linear.
+
+```{r}
+ggplot(diamonds, aes(x = log(carat), y = log(price))) +
+  geom_point(alpha = .2)
+
+diamonds2 = data.frame(carat = log(diamonds$carat), 
+                       price = log(diamonds$price))
+
+caratmodel = lm(price ~ carat, data = diamonds2)
+
+m = diamonds2 %>% expand(carat)
+grid = m %>% 
+  add_predictions(price = caratmodel)
+
+ggplot(diamonds2, aes(carat, price)) + 
+  geom_point(alpha = .1) + 
+  geom_line(data = grid, colour = "blue", size = 1) 
+
+autoplot(caratmodel)
+```
+
+As transformações mais comuns a considerar são log(x), sqrt(x), exp(x) e x^2.
 
 ##  Non-constant variance of error terms
 
-Transformações ou weighted least squares
+Transformações ou weighted least squares. 
+
+```{r}
+advertising = read.csv("data/Advertising.csv", row.names=1)
+ggpairs(advertising)
+
+tv.model = lm(Sales ~ TV, data = advertising)
+
+tidy(tv.model, conf.int = TRUE)
+glance(tv.model, conf.int = TRUE)
+
+autoplot(tv.model)
+
+ggplot(advertising, aes((TV), (Sales))) + 
+  geom_point()
+
+ggplot(advertising, aes(log(TV), log(Sales))) + 
+  geom_point()
+
+tv.model2 = lm(log(Sales) ~ log(TV), data = advertising)
+
+tidy(tv.model, conf.int = TRUE)
+glance(tv.model, conf.int = TRUE)
+
+autoplot(tv.model2)
+
+```
+
 
 ## Outliers e High-leverage points
 
 ![outliers](others-figs//3.12.pdf)
 
 ![leverage](others-figs//3.13.pdf)
+
+Uma boa: http://setosa.io/ev/ordinary-least-squares-regression/
+
+No plot de studentized residuals, pontos com resíduos normalizados maiores que 3 são suspeitos.
+
+Para leverage, o adequado é olhar pontos com leverage muito acima dos demais, ou maior que (p + 1)/n. (p sendo o número de preditores.)
 
 ## Colinearity
 
@@ -214,6 +315,12 @@ vif(mlm)
 ```{r}
 credit <- read.csv("data/Credit.csv", row.names=1)
 names(credit)
-#credit.model = lm(Balance ~ Age + Rating + Limit, data = credit)
+credit.model = lm(Balance ~ Age + Rating + Limit, data = credit)
+summary(credit.model)
+
+credit.model = lm(Balance ~ Age + Limit, data = credit)
+
+vif(credit.model)
+cor(credit %>% select(Age, Rating, Limit))
 ```
 
