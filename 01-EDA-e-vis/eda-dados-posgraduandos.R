@@ -1,7 +1,9 @@
+# Você precisará instalar esses pacotes. Faça install.packages("nome") para cada um.
 library(dplyr, warn.conflicts = F)
 library(readr)
 library(ggplot2)
 # theme_set(theme_bw()) # você pode preferir os gráficos assim
+library(gmodels)
 
 # ====================================
 # LER, ARRUMAR, LIMPAR
@@ -128,6 +130,5 @@ ggplot(dados, aes(x = curso, y = altura)) +
   geom_violin() + 
   geom_point(position = position_jitter(width = 0.07), size = 4, alpha = 0.5)
 
-require(gmodels)
 CrossTable(dados$sexo, dados$curso, prop.chisq = FALSE)
 
