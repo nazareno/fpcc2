@@ -1,0 +1,55 @@
+---
+title: "Inferência parte 1"
+author: "Nazareno"
+date: "2 de setembro de 2016"
+output: 
+  html_document:
+    theme: readable
+    fig_width: 7
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+theme_set(theme_bw())
+```
+
+Os dados
+
+```{r}
+lastfm = read.csv("dados/experimento-lastfm.csv")
+str(lastfm)
+
+lastfm = select(lastfm, news, ecletic) %>% 
+  filter(complete.cases(lastfm))
+
+lastfm %>% ggplot(aes(news)) + geom_histogram(binwidth = 10)
+lastfm %>% ggplot(aes(ecletic)) + geom_histogram(binwidth = 100)
+```
+
+```{r}
+library(resample)
+
+onerun = function(dado, n) {
+  experiment = sample(dado, n)
+  b = bootstrap(experiment, mean)
+  mean.news = CI.bca(b, probs = c(.025, .975))
+  mean.news
+}
+
+cobertura = function(dado, n, reps = 1000){
+  r = replicate(reps, onerun(dado, n))
+  answer = c()
+  for(i in seq_along(length(r))){
+    lower = r[1], 
+                                         upper = interval[2]
+  }
+}
+
+c = cobertura(lastfm$news, 200, 100)
+
+```
+

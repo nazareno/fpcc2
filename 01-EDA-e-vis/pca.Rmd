@@ -107,6 +107,11 @@ biplot(pr.out)
 
 autoplot(pr.out, label = TRUE)
 
+autoplot(pr.out, label = TRUE, label.size = 3, shape = FALSE, 
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3)
+
+
 plot_pve(pr.out)
 ```
 
@@ -129,3 +134,20 @@ autoplot(pr.out, data = iris, colour = 'Species', size = 3,
 plot_pve(pr.out)
 ```
 
+```{r}
+require(Rtsne)
+iris2 = iris %>% filter(!duplicated(iris))
+tsne.out = Rtsne(select(iris2, -Species), 
+                 verbose = TRUE)
+
+df = as.data.frame(tsne.out$Y)
+df$Species = iris2$Species
+
+ggplot(df, aes(x = V1, y = V2, label = Species)) + 
+  geom_point(alpha = 0.8, size = 3, color = "tomato") 
+
+ggplot(df, aes(x = V1, y = V2, label = Species)) + 
+  geom_point(alpha = 0.2, size = 3, color = "tomato") + 
+  geom_text(alpha = .7, size = 4, hjust = -.2)
+
+```

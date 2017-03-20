@@ -37,7 +37,7 @@ dw2$repository_language <- dw$repository_language
 ggpairs(select(dw2, -repository_language))
 
 summary(select(dw2, -repository_language))
-dw2.scaled = scale(select(dw2, -repository_language))
+#dw2.scaled = scale(select(dw2, -repository_language))
 dw2.scaled = select(dw2, -repository_language) %>% 
   mutate_each(funs(scale))
 ```
@@ -50,12 +50,12 @@ hc = hclust(dists, method = "ward.D")
 
 plot(hc, cex = .6)
 plot(hc, hang = -1)
-rect.hclust(hc, k=6)
+rect.hclust(hc, k=7)
 
-dw2$cluster = factor(cutree(hc, k=5))
+dw2$cluster = factor(cutree(hc, k=7))
 
 dw2.scaled$repository_language = dw2$repository_language
-dw2.scaled$cluster = factor(cutree(hc, k=5))
+dw2.scaled$cluster = factor(cutree(hc, k=7))
 
 dw2.long = melt(dw2.scaled, id.vars = c("repository_language", "cluster"))
 
@@ -64,7 +64,7 @@ ggplot(dw2.long, aes(x = variable, y = value, colour = variable)) +
   geom_point(alpha = 0.2, position = position_jitter(width = .2)) + 
   facet_wrap(~ cluster) 
 
-plot(silhouette(cutree(hc, k = 6), dists))
+plot(silhouette(cutree(hc, k = 4), dists))
 
 ```
 
@@ -75,7 +75,7 @@ toclust = select(dw2.scaled, 1:4)
 row.names(toclust) = dw2.scaled$repository_language
 dists = dist(toclust)
 
-km <- kmeans(toclust, centers = 5, nstart = 10)
+km <- kmeans(toclust, centers = 6, nstart = 10)
 
 autoplot(km, data = dw2.scaled, size = 3)
 autoplot(km, data = dw2.scaled, label = TRUE)
@@ -140,7 +140,8 @@ ggplot(rs, aes(x = x, y = y, colour = cluster)) +
 rs$cluster = factor(cutree(hc, k=8))
 ggplot(rs, aes(x = x, y = y, colour = cluster, label = cluster)) + 
   geom_point(size = 2) + 
-  geom_text(hjust = -.1, vjust = 1)
+  geom_text(hjust = -.1, vjust = 1) + 
+  xlim(0, 150)
 
 plot(silhouette(cutree(hc, k = 4), dists))
 plot(silhouette(cutree(hc, k = 6), dists))
@@ -154,12 +155,18 @@ plot(silhouette(cutree(hc, k = 6), dists))
 ## K-means
 
 ```{r}
-km <- kmeans(rs, centers=8, nstart=10)
+km <- kmeans(rs, centers=4, nstart=10)
 km
 
 autoplot(km, data = rs)
 
 autoplot(km, data = rs, frame = TRUE)
+
+```
+
+## Iris
+
+```{r}
 
 ```
 

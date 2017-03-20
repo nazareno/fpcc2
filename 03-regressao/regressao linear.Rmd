@@ -23,6 +23,10 @@ ggplot(countyComplete, aes(x = hs_grad, y = poverty)) +
   geom_point(alpha = 0.4)
 
 ggplot(countyComplete, aes(x = hs_grad, y = poverty)) + 
+  geom_hex()
+
+
+ggplot(countyComplete, aes(x = hs_grad, y = poverty)) + 
   geom_point(alpha = 0.4) + geom_smooth(method = "lm", se = FALSE)
 
 
@@ -36,6 +40,7 @@ confint(mod)
 
 # broom: 
 tidy(mod, conf.int = TRUE)
+#glance(mod)
 
 ggplot(countyComplete, aes(x = hs_grad, y = poverty)) + 
   geom_point(alpha = 0.4) + 
@@ -103,10 +108,26 @@ var.residuals <- sum(ml2$residuals^2)
 #calculando e conferindo o R^2
 (var.y2 - var.residuals)/var.y2
 summary(ml2)$r.squared
+
+glance(ml2)
 ```
 
 ## Com bootstrap 
 
+### Versão 1
+
+```{r}
+library(purrr)
+boot <- bootstrap(mtcars, 100)
+
+models <- map(boot$strap, ~ lm(mpg ~ wt, data = .))
+tidied <- map_df(models, broom::tidy, .id = "id")
+
+hist(subset(tidied, term == "wt")$estimate)
+```
+
+
+### Versão 2
 ```{r}
 library(boot)
 library(ISLR) # dados
@@ -130,7 +151,7 @@ boot.ci(regressao.b, type = "bca", index = 1)
 boot.ci(regressao.b, type = "bca", index = 2)
 ```
 
-## Opção com outro pacote
+### Opção com outro pacote
 
 ```{r}
 library("simpleboot")
@@ -166,7 +187,7 @@ autoplot(mod, label.size = 3, alpha = 0.4)
 mario <- read.csv("marioKart.txt", header = TRUE, sep = "\t")
 names(mario)
 
-ggpairs(select(mario, totalPr, cond, startPr, nBids))
+ggpairs(select(mario, totalPr, cond, startPr, nBids, stockPhoto))
 mario <- filter(mario, totalPr < 100)
 
 mlm <- lm(totalPr ~ cond, data = mario)
@@ -179,14 +200,93 @@ ggplot(mario, aes(x = cond, y = totalPr, group = 1)) +
 
 ```
 
+```{r}
+mario %>% 
+  ggplot() + 
+  geom_point(aes(x = startPr, y = totalPr), size = 2, alpha = .7)
+
+mario %>% 
+  ggplot(aes(x = cond, y = totalPr)) + 
+  geom_violin() + 
+  geom_point(position = position_jitter(width = 0.1)) 
+
+mario %>% 
+  ggplot() + 
+  geom_point(aes(x = nBids, y = totalPr), size = 2, alpha = .7)
+```
+
+```{r}
+mlm <- lm(totalPr ~ cond + startPr, data = mario)
+
+# devtools::install_github("hadley/modelr")
+library(modelr)
+mario = mario %>% 
+  #data_grid(cond) %>% 
+  add_predictions(mlm)
+
+mario %>% 
+  ggplot(aes(x = cond, y = totalPr)) + 
+  geom_violin() + 
+  geom_point(position = position_jitter(width = 0.1))  + 
+  geom_point(aes(y = pred), size = 4, colour = "red")
+
+mario %>% 
+  ggplot(aes(x = startPr, y = totalPr)) + 
+  geom_line(aes(y = pred), size = 2, colour = "red") + 
+  geom_point(aes(y = totalPr)) + 
+  facet_grid(. ~ cond)
+
+
+
+mario = mario %>% 
+  #data_grid(cond) %>% 
+  add_residuals(mlm)
+
+ggplot(mario, aes(resid)) + 
+  geom_freqpoly(binwidth = 2)
+
+ggplot(mario, aes(cond, resid)) + 
+  geom_ref_line(h = 0, colour = "grey") +
+  geom_point(position = position_jitter(width = 0.1))
+
+ggplot(mario, aes(startPr, resid)) + 
+  geom_ref_line(h = 0, colour = "grey") +
+  geom_point(position = position_jitter(width = 0.1))
+
+ggplot(mario, aes(totalPr, resid)) + 
+  geom_ref_line(h = 0, colour = "grey") +
+  geom_point(position = position_jitter(width = 0.1))
+
+
+ggplot(mario, aes(nBids, resid)) + 
+  geom_ref_line(h = 0, colour = "grey") +
+  geom_point(position = position_jitter(width = 0.1))
+
+ggplot(mario, aes(x = totalPr)) + 
+  geom_line(aes(y = pred), colour = "green") + 
+  geom_point(aes(y = totalPr), alpha = 0.6)
+  
+
+```
+
+
 ## Sobre múltiplas variáveis juntas num modelo
 
 ```{r}
 mlm <- lm(totalPr ~ stockPhoto, data = mario)
-summary(mlm)
+tidy(mlm, conf.int = T)
+glance(mlm)
+
+mario %>% 
+  ggplot(aes(x = stockPhoto, y = totalPr)) + 
+  geom_violin() + 
+  geom_point(position = position_jitter(width = 0.1))  + 
+  geom_point(aes(y = pred), size = 4, colour = "red")
+
 
 mlm <- lm(totalPr ~ stockPhoto + cond, data = mario)
-summary(mlm)
+tidy(mlm, conf.int = T)
+glance(mlm)
 ```
 
 ## Variáveis numéricas e categóricas juntas

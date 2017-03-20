@@ -207,7 +207,7 @@ Imaginemos que essa é a população.
 # install.packages("resample")
 library(resample)
 
-b = bootstrap(lastfm$news, mean)
+b = bootstrap(lastfm$news, mean, R = 10000)
 CI.percentile(b, probs = c(.025, .975))
 
 
@@ -261,6 +261,7 @@ Usando uma variável mais assimétrica (no nosso caso, news) e uma amostra não 
 library("Rmisc", quietly = T)
 library(dplyr)
 
+dist_original = lastfm$ecletic
 pop_mean <- mean(dist_original)
 
 sample_cis <- data.frame(upper = c(), mean = c(), lower = c())
@@ -278,7 +279,7 @@ sample_cis <- sample_cis %>%
 boot_cis <- data.frame(upper = c(), mean = c(), lower = c())
 for(i in seq(1, num_samples)){
   a_sample <- sample(dist_original, sample_size)
-  interval <- CI.percentile(bootstrap(a_sample, mean, R = 1000))
+  interval <- CI.bca(bootstrap(a_sample, mean, R = 1000))
   boot_cis <- rbind(boot_cis, data.frame(mean = mean(interval), 
                                          lower = interval[1], 
                                          upper = interval[2]))
@@ -294,7 +295,7 @@ sample_cis %>%
   geom_hline(aes(yintercept=mean(mean(dist_original))))
 
 boot_cis %>% 
-  ggplot(aes(x = 1:nrow(sample_cis), y = mean, colour = contains_pop_mean)) +
+  ggplot(aes(x = 1:nrow(boot_cis), y = mean, colour = contains_pop_mean)) +
   geom_point() + 
   geom_errorbar(aes(ymin = lower, ymax = upper)) + 
   geom_hline(aes(yintercept=mean(mean(dist_original))))

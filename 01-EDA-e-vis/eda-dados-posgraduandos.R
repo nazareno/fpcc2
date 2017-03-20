@@ -1,17 +1,19 @@
-require(ggplot2)
-require(dplyr)
+library(ggplot2)
+library(dplyr, warn.conflicts = F)
+library(readr)
 
-dados <- read.csv("dados//Dados de alunos para as aulas de FPCC-report.csv")
+dados = read_csv("dados//Dados de alunos para as aulas de FPCC-report.csv")
+dados = renomeia_colunas(dados)
 
-dados <- filter(dados, complete.cases(dados))
+dados = filter(dados, complete.cases(dados))
 str(dados)
 
 ggplot(dados, aes(x = "altura", y = Qual.a.sua.altura.em.centímetros.)) + 
   geom_violin() + 
   geom_point(position = position_jitter(width = 0.1, height = 0), size = 3, alpha = 0.5)
 
-ggplot(dados, aes(x = De.que.curso.você.é.aluno.)) + 
-         geom_histogram()
+ggplot(dados) + 
+  geom_bar(mapping = aes(x = De.que.curso.você.é.aluno.), stat = "count")
 
 ggplot(dados, aes(x = Você.é...)) + 
   geom_histogram()

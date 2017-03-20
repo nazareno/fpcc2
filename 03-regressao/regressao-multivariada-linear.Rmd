@@ -33,35 +33,86 @@ ggpairs(advertising, alpha = 0.7)
 
 # Uma regressão linear simples 
 
-Modelo da relação entre gasto com TV e vendas:
+### Modelo da relação entre gasto com TV e vendas. 
+
+Linear direto com os dados.
+
+```{r}
+tv.model = lm(Sales ~ TV, data = advertising)
+
+advertising2 = advertising %>% 
+  add_predictions(tv.model) %>% 
+  add_residuals(tv.model)
+
+# Modelo x dados
+advertising2 %>% 
+  ggplot(aes(x = TV)) + 
+  geom_line(aes(y = pred), size = 2, colour = "blue") + 
+  geom_point(aes(y = Sales))
+
+# Resíduos x dados
+advertising2 %>% 
+  ggplot(aes(x = TV)) + 
+  geom_point(aes(y = resid), size = 2) +
+  geom_ref_line(h = 0, colour = "grey80")
+
+tidy(tv.model, conf.int = TRUE)
+glance(tv.model, conf.int = TRUE)
+
+```
+
+Transformações.
 
 ```{r}
 advertising$TVsqrt = sqrt(advertising$TV)
 tv.model = lm(Sales ~ TVsqrt, data = advertising)
 
+advertising2 = advertising %>% 
+  #data_grid(cond) %>% 
+  add_predictions(tv.model) %>% 
+  add_residuals(tv.model)
+
+# Modelo x dados
+advertising2 %>% 
+  ggplot(aes(x = TVsqrt)) + 
+  geom_line(aes(y = pred), size = 2, colour = "blue") + 
+  geom_point(aes(y = Sales))
+
+advertising2 %>% 
+  ggplot(aes(x = TV)) + 
+  geom_line(aes(y = pred), size = 2, colour = "blue") + 
+  geom_point(aes(y = Sales))
+
+# Resíduos x dados
+advertising2 %>% 
+  ggplot(aes(x = TV)) + 
+  geom_point(aes(y = resid), size = 2) +
+  geom_ref_line(h = 0, colour = "grey80")
+
 tidy(tv.model, conf.int = TRUE)
 glance(tv.model, conf.int = TRUE)
 
-summary(tv.model)
-```
-
-```{r}
-ggplot(advertising, aes(x = sqrt(TV), y = Sales)) + 
-  geom_point(alpha = 0.4) + 
-  geom_line(aes(y = predict(tv.model, advertising)), colour = "red")
-
+# Depois
 autoplot(tv.model)
-
-ggplot(advertising, aes(x = log(TV), y = log(Sales))) + 
-  geom_point(alpha = 0.4)
 ```
 
-Os resíduos dão sinal de não linearidade. Voltamos para falar de diagnóstico e consertos mais na frente.
+Os resíduos ainda dão sinal de não linearidade. Voltamos para falar de diagnóstico e consertos mais na frente.
 
 # Colocando mais variáveis como preditoras
 
 ```{r}
 radio.model = lm(Sales ~ Radio, data = advertising)
+
+advertising2 = advertising %>% 
+  add_predictions(radio.model) %>% 
+  add_residuals(radio.model)
+
+# Modelo x dados
+advertising2 %>% 
+  ggplot(aes(x = Radio)) + 
+  geom_line(aes(y = pred), size = 2, colour = "blue") + 
+  geom_point(aes(y = Sales))
+
 tidy(radio.model, conf.int = TRUE)
 glance(radio.model, conf.int = TRUE)
 ```
@@ -75,7 +126,7 @@ glance(np.model, conf.int = TRUE)
 Considerando os preditores ao mesmo tempo. Isso é diferente de considerá-los separadamente:
 
 ```{r}
-multi = lm(Sales ~ TV + Newspaper + Radio, data = advertising)
+multi = lm(Sales ~ TVsqrt + Newspaper + Radio, data = advertising)
 tidy(multi, conf.int = TRUE)
 glance(multi)
 ```
@@ -93,7 +144,7 @@ Algumas perguntas que queremos responder:
 # TODO como modelar interações quando espero que o efeito tenha sinais diferentes?
 
 ```{r}
-multi = lm(Sales ~ TV + Radio + Radio*TV, data = advertising)
+multi = lm(Sales ~ TV + Radio + Newspaper + Radio*TV, data = advertising)
 tidy(multi, conf.int = TRUE)
 glance(multi)
 
@@ -178,17 +229,18 @@ autoplot(mlm)
 ```{r}
 auto = select(Auto, mpg, horsepower)
 ggpairs(auto)
+
 automodel = lm(mpg ~ horsepower, data = auto)
+
 tidy(automodel, conf.int = TRUE)
 glance(automodel)
 
-m = auto %>% expand(horsepower)
-grid = m %>% 
-  add_predictions(mpg = automodel)
+grid = auto %>% 
+  add_predictions(model = automodel)
 
-ggplot(auto, aes(horsepower, mpg)) + 
-  geom_point(alpha = .8) + 
-  geom_line(data = grid, colour = "red", size = 1) 
+ggplot(grid, aes(horsepower)) + 
+  geom_point(aes(y = mpg), alpha = .8) + 
+  geom_line(aes(y = pred), colour = "red", size = 1) 
 
 autoplot(automodel)
 ```
@@ -199,17 +251,23 @@ Uma solução possível é tentar polinômios de grau mais alto, que têm curva.
 ggpairs(auto)
 automodel = lm(mpg ~ horsepower + I(horsepower^2), data = auto)
 
-m = auto %>% expand(horsepower, horsepower^2)
-grid = m %>% 
-  add_predictions(mpg = automodel)
+grid = auto %>% 
+  mutate(horsepower2 = horsepower^2) %>% 
+  add_predictions(model = automodel)
 
-ggplot(auto, aes(horsepower, mpg)) + 
-  geom_point(alpha = .8) + 
-  geom_line(data = grid, colour = "red", size = 1) 
+ggplot(grid, aes(horsepower)) + 
+  geom_point(aes(y = mpg), alpha = .8) + 
+  geom_line(aes(y = pred), colour = "red", size = 1) 
+
+autoplot(automodel)
 
 tidy(automodel)
 glance(automodel)
-autoplot(automodel)
+```
+
+```{r}
+ggplot(grid, aes(y = horsepower, x = mpg)) + 
+  geom_point(alpha = .8) + 
 ```
 
 ### Caso 2:
@@ -220,15 +278,18 @@ autoplot(automodel)
 ggplot(diamonds, aes(x = carat, y = price)) +
   geom_point(alpha = .3)
 
+# Bonus: geom_hex!
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_hex()
+
 caratmodel = lm(price ~ carat, data = diamonds)
 
-m = diamonds %>% expand(carat)
-grid = m %>% 
-  add_predictions(price = caratmodel)
+grid = diamonds %>% 
+  add_predictions(model = caratmodel)
 
-ggplot(diamonds, aes(carat, price)) + 
-  geom_point(alpha = .1) + 
-  geom_line(data = grid, colour = "red", size = 1) 
+ggplot(grid, aes(x = carat)) + 
+  geom_hex(aes(y = price)) + 
+  geom_line(aes(y = pred), colour = "red", size = 1) 
 
 autoplot(caratmodel)
 ```
@@ -244,13 +305,12 @@ diamonds2 = data.frame(carat = log(diamonds$carat),
 
 caratmodel = lm(price ~ carat, data = diamonds2)
 
-m = diamonds2 %>% expand(carat)
-grid = m %>% 
-  add_predictions(price = caratmodel)
+grid = diamonds2 %>% 
+  add_predictions(model = caratmodel)
 
-ggplot(diamonds2, aes(carat, price)) + 
-  geom_point(alpha = .1) + 
-  geom_line(data = grid, colour = "blue", size = 1) 
+ggplot(grid, aes(x = carat)) + 
+  geom_hex(aes(y = price)) + 
+  geom_line(aes(y = pred), colour = "red", size = 1) 
 
 autoplot(caratmodel)
 ```
@@ -272,7 +332,7 @@ glance(tv.model, conf.int = TRUE)
 
 autoplot(tv.model)
 
-ggplot(advertising, aes((TV), (Sales))) + 
+ggplot(advertising, aes(TV, Sales)) + 
   geom_point()
 
 ggplot(advertising, aes(log(TV), log(Sales))) + 
@@ -280,11 +340,22 @@ ggplot(advertising, aes(log(TV), log(Sales))) +
 
 tv.model2 = lm(log(Sales) ~ log(TV), data = advertising)
 
+grid = advertising %>% 
+  add_predictions(model = tv.model2)
+
+ggplot(grid, aes(x = TV)) + 
+  geom_point(aes(y = Sales)) + 
+  geom_line(aes(y = exp(pred)), colour = "red", size = 1) 
+
 tidy(tv.model, conf.int = TRUE)
 glance(tv.model, conf.int = TRUE)
 
 autoplot(tv.model2)
 
+names(advertising)
+advertising2 = advertising %>% 
+  mutate(Sales = log(Sales), TV = log(TV))
+ggpairs(advertising2)
 ```
 
 
@@ -315,12 +386,18 @@ vif(mlm)
 ```{r}
 credit <- read.csv("data/Credit.csv", row.names=1)
 names(credit)
-credit.model = lm(Balance ~ Age + Rating + Limit, data = credit)
-summary(credit.model)
+
+credit.model = lm(Balance ~ Age + Student + Married, data = credit)
 
 credit.model = lm(Balance ~ Age + Limit, data = credit)
 
-vif(credit.model)
+tidy(credit.model, conf.int = TRUE)
+glance(credit.model)
+
+credit.model2 = lm(Balance ~ Age + Rating + Limit, data = credit)
+tidy(credit.model2, conf.int = TRUE)
+
+vif(credit.model2)
 cor(credit %>% select(Age, Rating, Limit))
 ```
 
