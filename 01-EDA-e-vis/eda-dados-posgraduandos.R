@@ -15,6 +15,7 @@ library(gmodels)
 dados = read_csv("dados//Dados de alunos para as aulas de FPCC-report.csv")
 
 View(dados)
+
 # usando dplyr
 dados %>% View()
 
@@ -35,7 +36,7 @@ dados = dados %>%
 dados = dados %>% 
   filter(complete.cases(dados))
 
-str(dados)
+glimpse(dados)
 
 # ====================================
 # EXPLORAR, VISUALIZAR
@@ -46,18 +47,44 @@ str(dados)
 # ------------------------------------
 
 # Altura
-ggplot(dados, mapping = aes(x = "altura", y = altura)) + 
-  geom_point()
+ggplot(data = dados, 
+       mapping = aes(x = "valor", 
+                     y = altura)) + 
+  geom_point(alpha = 0.5, position = position_jitter(width = .1))
 
+dados %>% 
+  ggplot(mapping = aes(x = altura)) + 
+  geom_histogram(bins = 10) + 
+  geom_rug(alpha = 0.7)
+
+dados %>% 
+  ggplot(mapping = aes(x = altura)) + 
+  geom_density()  
+  #geom_freqpoly(bins = 10)
+  
 ggplot(dados, aes(x = "altura", y = altura)) + 
   geom_violin() + 
-  geom_point(position = position_jitter(width = 0.1, height = 0), size = 3, alpha = 0.5)
+  geom_point(position = position_jitter(width = 0.1, height = 0), size = 2, alpha = 0.5)
 
 ggplot(dados, mapping = aes(x = altura)) + 
   #geom_histogram(bins = 12) 
   # geom_freqpoly(bins = 20)
   geom_density() 
   # geom_rug()
+
+# boxplots
+ggplot(dados, aes(x = "altura", y = altura)) + 
+  geom_boxplot(width = .3) + 
+  geom_point(position = position_jitter(width = 0.1, height = 0), size = 2, alpha = 0.5)
+
+ggplot(dados, aes(x = sexo, y = altura)) + 
+  geom_boxplot(width = .3) + 
+  geom_point(position = position_jitter(width = 0.1, height = 0), size = 2, alpha = 0.5)
+
+dados %>% 
+  group_by(sexo) %>% 
+  summarise(iqr = IQR(altura), 
+            sd = sd(altura))
 
 # Linguagens de programação
 dados %>% 
@@ -73,8 +100,9 @@ dados %>%
 dados %>% 
   #filter(repositorios < 10) %>% 
   ggplot(mapping = aes(x = repositorios)) + 
-  geom_histogram(bins = 5) + 
-  geom_vline(xintercept = mean(dados$repositorios), colour = "orange")
+  geom_histogram(bins = 16) + 
+  geom_vline(xintercept = mean(dados$repositorios), colour = "orange") + 
+  geom_vline(xintercept = median(dados$repositorios), colour = "blue")
 
 # Qual o formato esperado da distribuição para as demais variáveis?
 
