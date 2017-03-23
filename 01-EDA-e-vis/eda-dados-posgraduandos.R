@@ -127,6 +127,11 @@ dados %>%
   summarise(altura.media = mean(altura), 
             sd.altura = sd(altura))
 
+dados %>% 
+  ggplot(mapping = aes(x = linguagens)) + 
+  geom_histogram(bins = 7) + 
+  geom_rug()
+
 
 # ------------------------------------
 # CATEGÓRICAS
@@ -145,13 +150,36 @@ ggplot(dados) +
   geom_bar(mapping = aes(x = curso, fill = sexo), position = "fill") + # tente position = "stack"/"dodge"/"fill"
   coord_flip()
 
-
 # ------------------------------------
 # DUAS VARIÁVEIS
 # ------------------------------------
 ggplot(dados, aes (y = repositorios, 
                    x = linguagens)) + 
-  geom_point(size = 2, alpha = 0.6)
+  geom_count(alpha = 0.6)
+
+ggplot(dados, aes (y = confianca_estatistica, 
+                   x = projetos_de_pesquisa)) + 
+  geom_point(alpha = 0.4)
+
+ggplot(dados, aes (y = confianca_estatistica, 
+                   x = projetos_de_pesquisa, group = projetos_de_pesquisa)) + 
+  geom_boxplot(alpha = 0.4)
+  #geom_violin(alpha = 0.4)
+
+ggplot(dados, aes (y = altura, 
+                   x = linguagens)) + 
+  geom_point(alpha = 0.6)
+
+ggplot(dados, aes(x = curso, 
+                  y = linguagens)) + 
+  geom_boxplot() + 
+  geom_point(position = position_jitter(width = .2), 
+             alpha = .2)  
+
+ggplot(dados, aes(x = curso, 
+                  y = linguagens)) + 
+  geom_count()
+
 
 ggplot(dados, aes(x = curso, y = altura)) + 
   #geom_boxplot(alpha = 0.2) +

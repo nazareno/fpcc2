@@ -2,7 +2,7 @@
 title: "Algumas dicas sobre formas e medidas de correlação"
 author: "Nazareno Andrade"
 date: "13 de março de 2016"
-output: html_document
+output: html_notebook
 ---
 
 ```{r, message=FALSE}
@@ -112,7 +112,7 @@ df$y = 100 * exp(-1.2 * df$x) #+ rnorm(n, mean = 0.05, sd = 1)
 
 ggplot(df, aes(x = x, y = y)) + 
   geom_point(colour = "darkgrey", size = 4) + 
-  theme_bw()# + scale_y_log10() 
+  theme_bw() + scale_y_log10()  
 
 # tente descomentando o scale_y_log10 acima e veja o que acontece
   
@@ -141,4 +141,17 @@ ggpairs(dados, params = c(binwidth = 2, alpha = 0.7))
 ```
 
 ------
+
+```{r}
+names(diamonds)
+
+ggplot(diamonds, aes(x = carat, y = price)) + 
+  geom_hex()
+
+ggplot(diamonds, aes(x = price)) + 
+  geom_histogram() + 
+  scale_x_log10()
+
+ggpairs(dados)
+```
 
