@@ -165,4 +165,58 @@ gastos_tudo %>%
   coord_flip()
 ```
 
+## Diferentes visões da variação
+
+Um dataset relativamente pequeno. 
+
+```{r}
+alguns_gastos = gastos_tudo %>% 
+  filter(sgPartido %in% c("PT", "PSDB", "PMDB"), # duas condições = AND
+         txtDescricao %in% c("Manutenção De Escritório De Apoio À Atividade Parlamentar", 
+                             "Divulgação Da Atividade Parlamentar.", 
+                             "Fornecimento De Alimentação Do Parlamentar")) %>% # %in% é muito útil!
+  group_by(sgPartido, txNomeParlamentar, txtDescricao) %>% 
+  summarise(total = sum(vlrLiquido)) 
+```
+
+```{r}
+alguns_gastos %>% 
+  ggplot(aes(x = "Todos", y = total)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .2) #+ scale_y_log10()
+
+alguns_gastos %>% 
+  ggplot(aes(x = "Todos", y = total)) + 
+  geom_boxplot(width = .1) # + scale_y_log10()
+
+alguns_gastos %>% 
+  ggplot(aes(x = total)) + 
+  #geom_histogram() + scale_x_log10()
+  geom_density() + scale_x_log10()
+```
+
+```{r}
+alguns_gastos %>% 
+  ggplot(aes(x = txtDescricao, y = total)) + 
+  geom_point(position = position_jitter(width = .1), alpha = .2) + 
+  coord_flip()#+ scale_y_log10() 
+
+alguns_gastos %>% 
+  ggplot(aes(x = txtDescricao, y = total)) + 
+  geom_boxplot(width = .2) +  # + scale_y_log10() 
+  coord_flip()
+
+alguns_gastos %>% 
+  ggplot(aes(x = total, colour = txtDescricao)) + 
+  #geom_histogram() + scale_x_log10()
+  geom_density() + scale_x_log10()
+
+alguns_gastos %>% 
+  ggplot(aes(x = total, fill = substr(txtDescricao, 1, 12))) + 
+  geom_histogram(bins = 20) +
+  #geom_density() + 
+  geom_rug() + 
+  scale_x_log10() + 
+  facet_grid(txtDescricao ~ .)
+
+```
 
