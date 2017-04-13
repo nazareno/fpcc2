@@ -1,13 +1,13 @@
-## Módulos 1 e 2: Análise descritiva e exploratória
+## Módulo 1: Análise descritiva e exploratória
 
-eda-dados-posgraduandos.R : EDA (análise exploratória) nos dados de um form respondidos pelos alunos
+1-eda-dados-posgraduandos.R : EDA (análise exploratória) nos dados de um form respondidos pelos alunos. Introdução ao R + Tidyverse.
 
-correlacoes.Rmd 	  : sobre correlações lineares e não-lineares
+2-dica-edas-camara.Rmd : Dicas e exemplos sobre EDA usando dados de gastos da câmara dos deputados. Depende dos dados [deste outro repo](https://github.com/nazareno/dados-da-camara-federal).
 
-visualizacoes.Rmd	  : exemplos e dicas de visualização
+3-outra-eda-camara.Rmd : Exemplos usando dados de votações da câmara. Usa também os dados da câmara que organizamos [em outro repo](https://github.com/nazareno/dados-da-camara-federal).
 
-pca.Rmd			  : sobre PCA
+4-correlacoes.Rmd : Sobre correlações lineares e não-lineares, e visualização delas.
 
-clustering.Rmd		  : exemplos com agrupamento
+5-visualizacoes-marcas-canais.Rmd : Exemplos de usos comuns de marcas e canais com ggplot2.
 
-
+6-figuras-para-publicar.Rmd : Dicas para salvar visualizações criadas em R para artigos científicos. 
