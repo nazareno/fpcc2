@@ -1,0 +1,67 @@
+---
+title: "Dicas sobre figuras para publicação"
+output: 
+  html_notebook: 
+    toc: true
+    toc_float: true
+    theme: lumen
+---
+
+```{r}
+library(ggplot2)
+library(dplyr, warn.conflicts = F)
+
+# Eu prefiro sempre esse tema
+theme_set(theme_bw())
+# mas experimente com outros. Veja todos em ?theme_bw
+```
+
+# B A BA
+
+As suas figuras finais para publicação serão diferentes daquelas que são geradas em notebooks R. **Elas não serão pngs salvos via RStudio!**.
+
+Para utilizar as figuras em documentos, você precisará se preocupar em que tamanho a figura será mostrada, e, as vezes na resolução dessa figura. É importante entender a diferença entre [figuras vetoriais](http://en.wikipedia.org/wiki/Vector_graphics) (PDFs e EPSs no nosso caso) ou [rasters](http://en.wikipedia.org/wiki/Raster_graphics) (TIFF, BMP, JPEG e GIF). Como imagens vetoriais não perdem resolução quando a aumentamos, vamos sempre que possível preferir esse tipo de imagem. A razão para usar rasters em artigos normalmente são fotos, caso seu artigo precise de uma. Nesse caso, você precisará decidir uma resolução, e usará normalmente 300 ou 600 dpi. Outra razão para usar pngs é para colocar figuras de sua pesquisa na web. Nesse caso, 100 ou 150 dpi já resolvem.
+
+Há duas maneiras principais de salvar uma visualização como pdf: 
+
+```{r}
+# Forma 1
+p = ggplot(mtcars, aes(x = mpg, y = disp)) + 
+  geom_point()
+
+pdf("exemplo-figura1-1.pdf") # para pngs, seria png("fig1.png", res = 300)
+print(p)
+dev.off()
+
+print(p)
+ggsave("exemplo-figura1-2.pdf") # ggsave precisa que a figura tenha sido impressa em um dispositivo de saída antes
+# para pngs: ggsave("fig2.png", dpi = 300)
+```
+
+# Tamanhos e e de fonte
+
+Lado bom: temos pdfs. O lado ruim é que eles estão quadrados, o que pode não lhe agradar. Assim como com pessoas, os gráficos não precisam ser quadrados: experimente com o tamanho na função `pdf()` ou `ggsave()`. Os argumentos width e height são em polegadas (embora na ggsave possam ser cm com `units = "cm"`), e o padrão é 7x7. Muitas vezes eu uso `width = 6, height = 4` quando o gráfico não tem legenda. 
+
+Mas que tamanho colocar, certo? Duas dicas aqui. A primeira é que para um artigo, você normalmente tem como saber quantos cm/polegadas você ocupará de largura com a figura. Basta saber a largura do texto no artigo, e você normalmente usará metade ou toda a largura, dependendo da figura. A altura pode vir em função da legibilidade. 
+
+A segunda dica é que o tamanho das fontes na sua figura não são relativos ao tamanho da figura; são absolutos. Isso quer dizer que diminuir uma figura aumenta proporcionalmente a fonte dos textos dentro da figura. Como uma figura PDF pode ser mostrada em um artigo diminuindo ou aumentando o seu tamanho original sem perda de resolução, aumentar/diminuir o tamanho da figura pdf que você está salvando às vezes é a forma mais simples de aumentar ou diminuir todas as fontes da figura. Para aumentar/diminuir fontes específicas (só a da legenda, por exemplo), veja em `?ggplot2::theme`.
+
+Para ver a questão do tamanho das fontes, abra os dois pdfs salvos abaixo e redimensione ambos para terem o mesmo tamanho na tela. As fontes terão tamanho bastante diferente. 
+
+```{r}
+mtcars$name = row.names(mtcars)
+p = ggplot(mtcars, aes(x = mpg, y = disp, label = name)) + 
+  geom_text()
+print(p)
+ggsave("exemplo-figura2-1.pdf", width = 6, height = 4) # ggsave precisa que a figura tenha sido impressa em um dispositivo de saída antes
+ggsave("exemplo-figura2-2.pdf", width = 9, height = 6) # ggsave precisa que a figura tenha sido impressa em um dispositivo de saída antes
+```
+
+# O documento
+
+A forma mais segura e portável de você escrever seus artigos, relatórios, etc sem dores de cabeça com leiaute e formatação é Latex (a pronúncia é latéc, ou lêitec em inglês). Caso você decida usar o Word, você _tem que saber usar a formatação por estilos_ e templates de documentos. Caso você queira usar google docs para artigos científicos, até onde sei, o mundo ainda não está pronto para você -- vai lhe dar um trabalhão.
+
+Para fazer seu documento usando latex, provavelmente a solução com menos configuração e mais facilidade de compartilhar depois que você encontrará é o [overleaf](https://www.overleaf.com). Depois de logar, procure um modelo/formato da ACM ou IEEE de duas colunas (por exemplo, o _Association for Computing Machinery (ACM) - SIG conference proceedings Template_) e o restante será intuitivo.
+
+
+
