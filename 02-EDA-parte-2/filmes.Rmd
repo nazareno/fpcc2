@@ -2,7 +2,10 @@
 title: "Tipos de filmes"
 author: "Nazareno"
 date: "16/04/2017"
-output: html_notebook
+output: 
+    
+    html_notebook:
+        theme: cerulean
 editor_options: 
   chunk_output_type: inline
 ---
@@ -67,6 +70,15 @@ filmes %>%
     geom_rug()
 ```
 
+```{r}
+tibble(a = c(rnorm(100, mean = 10, sd = 10), 
+             rnorm(40, mean = 80, sd = 15))) %>% 
+    ggplot(aes(x = "teste", y = a)) + 
+    geom_jitter(width = .02, height = 0, size = 2, alpha = .6) 
+
+```
+
+
 
 Para a renda do filme, observar uma escala linear ou logarítmica levam a conclusões diferentes. 
 
@@ -115,7 +127,7 @@ distancias.long = filmes %>%
     as.matrix %>% 
     reshape2::melt(varnames = c("row", "col"))
 
-distancias %>% 
+distancias.long %>% 
     ggplot(aes(x = row, y = col, fill = value)) + 
     geom_tile()
 
@@ -148,12 +160,12 @@ Cada junção é um passo do algoritmo. A altura na dendrograma em cada passo si
 Na medida que vamos aglomerando, as dissimilaridades nas junções tendem a ir aumentando caso haja estrutura de grupos.
 
 ```{r}
-data.frame(k = NROW(agrupamento_h$height):1, 
+data.frame(k = 1:NROW(agrupamento_h$height), 
            height = agrupamento_h$height) %>% 
     ggplot(aes(x = k, y = height)) + 
     geom_line(colour = "grey") + 
     geom_point() + 
-    labs(x = "Número de clusters produzido", y = "Dissimilaridade na junção")
+    labs(x = "Junções feitas (34 - clusters)", y = "Dissimilaridade na junção")
 
 ```
 
@@ -191,6 +203,7 @@ source("plota_solucoes_hclust.R")
 plota_hclusts_1d(filmes, "RATING", 
                  linkage_method = "centroid", # single, complete, average, centroid, median, ...
                  ks = 1:6)
+names(iris)
 ```
 
 ### Com outras variáveis
