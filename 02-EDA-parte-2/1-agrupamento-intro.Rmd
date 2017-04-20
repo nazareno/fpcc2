@@ -15,11 +15,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r}
+```{r load_code}
 library(tidyverse, warn.conflicts = F)
 library(rvest)
 library(plotly)
+library(cluster)
+library(ggdendro)
 theme_set(theme_light())
+source("plota_solucoes_hclust.R")
 ```
 
 Usaremos dados do [Rotten Tomatoes](https://www.rottentomatoes.com) sobre os filmes de Scarlett Johansson. 
@@ -141,7 +144,6 @@ distancias.long %>%
 
 
 ```{r}
-library(ggdendro)
 row.names(filmes) = NULL
 agrupamento_h = filmes %>% 
     column_to_rownames("TITLE") %>% # hclust precisa dos rótulos em nomes de linha (ruim)
@@ -199,7 +201,6 @@ filmes %>%
 ### Variando o método de linkage
 
 ```{r}
-source("plota_solucoes_hclust.R")
 plota_hclusts_1d(filmes, "RATING", 
                  linkage_method = "centroid", # single, complete, average, centroid, median, ...
                  ks = 1:6)
@@ -235,8 +236,6 @@ s(i) := ( b(i) - a(i) ) / max( a(i), b(i) )
 Repare como 1 significa uma boa atribuição para $i$, 0 significa indefinição e $-1$ significa que há outro cluster onde $i$ estaria melhor alocado.
 
 ```{r}
-library(cluster)
-
 distancias = filmes %>% 
     select(RATING) %>%
     dist(method = "euclidean")
@@ -263,7 +262,6 @@ p
 ```
 
 
-
 ```{r}
 agrupamento_h_2d = filmes %>% 
     column_to_rownames("TITLE") %>%
@@ -271,7 +269,7 @@ agrupamento_h_2d = filmes %>%
     dist(method = "euclidean") %>% 
     hclust(method = "centroid")
 
-ggdendrogram(agrupamento_h_2d)
+ggdendrogram(agrupamento_h_2d, rotate = TRUE)
 
 data.frame(k = NROW(agrupamento_h_2d$height):1, 
            height = agrupamento_h_2d$height) %>% 
@@ -298,37 +296,81 @@ Solução: standardize (aka scale).
 ```{r}
 agrupamento_h_2d = filmes %>% 
     column_to_rownames("TITLE") %>%
-    select(RATING, `BOX OFFICE`) %>%
-    #mutate(`BOX OFFICE` = log10(`BOX OFFICE`)) %>% 
+    select(RATING, `BOX OFFICE`) %>% 
+    mutate(`BOX OFFICE` = log10(`BOX OFFICE`)) %>% 
     mutate_all(funs(scale)) %>% 
     dist(method = "euclidean") %>% 
-    hclust(method = "centroid")
+    hclust(method = "ward.D")
 
-plot(agrupamento_h_2d)
+ggdendrogram(agrupamento_h_2d, rotate = TRUE)
 
+filmes2 = filmes %>% mutate(`BOX OFFICE` = log10(`BOX OFFICE`))
 plota_hclusts_2d(agrupamento_h_2d, 
-                 filmes, 
+                 filmes2, 
                  c("RATING", "`BOX OFFICE`"), 
-                 linkage_method = "single", ks = 1:6) # + scale_y_log10()
+                 linkage_method = "ward.D", ks = 1:6) + scale_y_log10()
 ```
 
 
+## Mais variáveis
+
+E se tivéssemos mais de duas variáveis?
 
 
 ```{r}
-library(broom)
-kclust = filmes %>% 
-    select(RATING, `BOX OFFICE`) %>% 
+filmes2 = agrupamento_h_md = filmes %>% 
+    mutate(TITLE_LENGTH = nchar(TITLE)) 
+
+dists = filmes2 %>% 
+    column_to_rownames("TITLE") %>%
     mutate(`BOX OFFICE` = log10(`BOX OFFICE`)) %>% 
-    mutate_each(funs(scale)) %>% 
-    kmeans(centers = 5)
+    select(RATING, `BOX OFFICE`, TITLE_LENGTH, YEAR) %>%
+    mutate_all(funs(scale)) %>% 
+    dist(method = "euclidean")
 
-augment(kclust, filmes) %>%
-    ggplot(aes(x = RATING, y = `BOX.OFFICE`, label = TITLE, colour = .cluster)) + 
-    geom_point() + 
-    geom_text() 
-    #+ scale_y_log10()
+agrupamento_h_md = dists %>% 
+    hclust(method = "ward.D")
 
-#autoplot(kclust, data = filmes)
+ggdendrogram(agrupamento_h_md, rotate = T)
+cores = RColorBrewer::brewer.pal(4, "Set3")
+plot(cluster::silhouette(cutree(agrupamento_h_md, k = 4), dists), col = cores, border = NA)
+```
+
+```{r}
+atribuicoes = tibble(k = 1:5) %>% 
+    group_by(k) %>% 
+    do(cbind(filmes2, 
+             grupo = as.character(cutree(agrupamento_h_md, .$k)))) 
+
+atribuicoes_long = atribuicoes %>% 
+    mutate(`BOX OFFICE` = scale(log10(`BOX OFFICE`)), 
+           YEAR = scale(YEAR), 
+           RATING = scale(RATING), 
+           TITLE_LENGTH = scale(TITLE_LENGTH)) %>% 
+    gather(key = "variavel", value = "valor", -TITLE, -k, -grupo, -CREDIT) 
+
+atribuicoes_long %>% 
+    ggplot(aes(x = variavel, y = valor, group = grupo, colour = grupo)) + 
+    geom_point(alpha = .4, position = position_dodge(width = .5)) + 
+    facet_wrap(~ paste(k, " grupos")) + 
+    labs(x = "", y = "z-score")
+
+atribuicoes_long %>% 
+    filter(k == 4) %>%
+    ggplot(aes(x = variavel, 
+               y = valor, 
+               colour = grupo)) + 
+    geom_boxplot() + 
+    geom_point(alpha = .4, position = position_jitter(width = .1)) + 
+    facet_wrap(~ grupo) + 
+    labs(x = "", y = "z-score")
+
+atribuicoes_long %>% 
+    filter(k == 4) %>%
+    ggplot(aes(x = variavel, y = valor, group = TITLE, colour = grupo)) + 
+    geom_point(alpha = .3, size = .5) + 
+    geom_line(alpha = .7) + 
+    facet_wrap(~ paste("Grupo ", grupo)) + 
+    labs(x = "", y = "z-score")
 ```
 

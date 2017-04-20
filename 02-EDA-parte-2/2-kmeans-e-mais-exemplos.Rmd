@@ -1,18 +1,22 @@
 ---
-title: "Clustering"
+title: "Kmeans e mais exemplos"
 author: "Nazareno Andrade"
 date: "30 de março de 2016"
-output: html_document
+output: 
+    html_notebook
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r, message=FALSE}
-require(ggplot2, quietly = TRUE)
 require(GGally, quietly = TRUE)
 require(reshape2, quietly = TRUE)
-require(dplyr, quietly = TRUE)
+require(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
 library(ggfortify)
 library(cluster)
 library(ggdendro)
+library(broom)
+
 theme_set(theme_bw())
 source("github-lib.R")
 ```
@@ -40,6 +44,7 @@ summary(select(dw2, -repository_language))
 #dw2.scaled = scale(select(dw2, -repository_language))
 dw2.scaled = select(dw2, -repository_language) %>% 
   mutate_each(funs(scale))
+summary(dw2.scaled)
 ```
 
 
@@ -50,58 +55,104 @@ hc = hclust(dists, method = "ward.D")
 
 plot(hc, cex = .6)
 plot(hc, hang = -1)
-rect.hclust(hc, k=7)
 
-dw2$cluster = factor(cutree(hc, k=7))
+n_clusters = 4
+rect.hclust(hc, k=n_clusters)
+
+dw2$cluster = factor(cutree(hc, k=n_clusters))
 
 dw2.scaled$repository_language = dw2$repository_language
-dw2.scaled$cluster = factor(cutree(hc, k=7))
+dw2.scaled$cluster = factor(cutree(hc, k=n_clusters))
 
 dw2.long = melt(dw2.scaled, id.vars = c("repository_language", "cluster"))
 
-ggplot(dw2.long, aes(x = variable, y = value, colour = variable)) + 
-  geom_boxplot() + 
-  geom_point(alpha = 0.2, position = position_jitter(width = .2)) + 
-  facet_wrap(~ cluster) 
+plot(silhouette(cutree(hc, k = n_clusters), dists), col = RColorBrewer::brewer.pal(n_clusters, "Set2"))
 
-plot(silhouette(cutree(hc, k = 4), dists))
+ggplot(dw2.long, aes(x = variable, y = value, group = repository_language, colour = cluster)) + 
+    geom_line(alpha = 0.4) + 
+    facet_wrap(~ cluster) 
 
 ```
 
 ## k-means
 
 ```{r}
-toclust = select(dw2.scaled, 1:4)
-row.names(toclust) = dw2.scaled$repository_language
-dists = dist(toclust)
+toclust = dw2.scaled %>% 
+    rownames_to_column(var = "language") %>% 
+    select(1:5) 
 
-km <- kmeans(toclust, centers = 6, nstart = 10)
+dists = toclust %>% 
+    select(-language) %>% 
+    dist() # só para plotar silhouetas depois
 
-autoplot(km, data = dw2.scaled, size = 3)
+km = toclust %>% 
+    select(-language) %>% 
+    kmeans(centers = n_clusters, nstart = 20)
+
+km %>% 
+    augment(toclust) %>% 
+    gather(key = "variável", value = "valor", -language, -.cluster) %>% 
+    ggplot(aes(x = `variável`, y = valor, group = language, colour = .cluster)) + 
+    geom_point(alpha = 0.2) + 
+    geom_line(alpha = .5) + 
+    facet_wrap(~ .cluster) 
+
+#autoplot(km, data = dw2.scaled, size = 3)
 autoplot(km, data = dw2.scaled, label = TRUE)
-plot(silhouette(km$cluster, dists))
+plot(silhouette(km$cluster, dists), col = RColorBrewer::brewer.pal(n_clusters, "Set2"))
 
 dw2.scaled$kmcluster = km$cluster
 dw2.long = melt(dw2.scaled, id.vars = c("repository_language", "cluster", "kmcluster"))
 
-ggplot(dw2.long, aes(x = variable, y = value, colour = variable)) + 
-  geom_boxplot() + 
-  geom_point(alpha = 0.2, position = position_jitter(width = .2)) + 
-  facet_wrap(~ kmcluster) 
+table(km$cluster)
 
-table(dw2.scaled$kmcluster)
+km %>% 
+    augment(toclust) %>% 
+    select(language, .cluster) %>% 
+    filter(.cluster == 1)
 
-plot(silhouette(dw2.scaled$kmcluster, dists))
-
-dw2.scaled[dw2.scaled$kmcluster == '1',]$repository_language
-
-dw2.scaled[dw2.scaled$kmcluster == '6',]$repository_language
 ```
 
 
 --------------------
 
-# Exemplo
+
+## K-means
+
+```{r}
+filmes = readr::read_csv("dados/filmes-scarlett-johanssson.csv")
+
+filmes_t = filmes %>% 
+    mutate(`BOX OFFICE` = scale(log10(`BOX OFFICE`)), 
+           RATING = scale(RATING)) 
+
+atribuicoes = tibble(k = 1:6) %>% 
+    group_by(k) %>% 
+    do(kmeans(select(filmes_t, RATING, `BOX OFFICE`), 
+              centers = .$k, 
+              nstart = 10) %>% augment(filmes)) # alterne entre filmes e filmes_t no augment  
+
+atribuicoes_long = atribuicoes %>% 
+    gather(key = "variavel", value = "valor", -TITLE, -k, -.cluster, -CREDIT) 
+
+atribuicoes %>%
+    ggplot(aes(x = RATING, y = `BOX.OFFICE`, label = TITLE, colour = .cluster)) + 
+    geom_point() + 
+    #geom_text() + 
+    facet_wrap(~ k)
+    #+ scale_y_log10()
+
+# A silhoueta
+dists = select(filmes_t, RATING, `BOX OFFICE`) %>% dist()
+km = kmeans(select(filmes_t, RATING, `BOX OFFICE`), 
+            centers = 4, 
+            nstart = 10) 
+
+silhouette(km$cluster, dists) %>% 
+    plot(col = RColorBrewer::brewer.pal(4, "Set2"))
+```
+
+# Mais um exemplo
 
 O dataset ruspini é clássico para ilustrar agrupamento.
 
@@ -151,8 +202,6 @@ plot(silhouette(cutree(hc, k = 6), dists))
 #ggdendrogram(hc.data, rotate = TRUE) + 
   #labs(title = "Agrupamento de Rustini")
 ```
-
-## K-means
 
 ```{r}
 km <- kmeans(rs, centers=4, nstart=10)
