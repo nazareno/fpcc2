@@ -29,7 +29,7 @@ Usaremos dados do [Rotten Tomatoes](https://www.rottentomatoes.com) sobre os fil
 
 ```{r}
 from_page <- read_html("https://www.rottentomatoes.com/celebrity/scarlett_johansson/") %>% 
-    html_node("#filmographyTbl") %>% # A sintaxe da expressão é de um seletor à lá JQuery
+    html_node("#filmographyTbl") %>% # A sintaxe da expressão é de um seletor à lá JQuery: https://rdrr.io/cran/rvest/man/html_nodes.html 
     html_table(fill=TRUE) %>% # Faz parse
     as.tibble()
 
@@ -309,6 +309,18 @@ plota_hclusts_2d(agrupamento_h_2d,
                  filmes2, 
                  c("RATING", "`BOX OFFICE`"), 
                  linkage_method = "ward.D", ks = 1:6) + scale_y_log10()
+```
+
+```{r}
+distancias = filmes %>% 
+    column_to_rownames("TITLE") %>%
+    select(RATING, `BOX OFFICE`) %>% 
+    mutate(`BOX OFFICE` = log10(`BOX OFFICE`)) %>% 
+    mutate_all(funs(scale)) %>% 
+    dist(method = "euclidean")
+
+plot(silhouette(cutree(agrupamento_h_2d, k = 4), distancias))
+
 ```
 
 
