@@ -37,7 +37,7 @@ filmes = movies %>%
            budget > 1e5) %>% 
     mutate(age = (2017 - year), 
            title = paste0(title, " (", year, ")"), 
-           love = r10 - r1) %>%
+           love = r10/(r10 + r1)) %>%
     select(title, age, budget, love, votes) %>%
     filter(complete.cases(.)) # complete.cases recebe um df, e não vetores como entrada
 ```
@@ -76,7 +76,7 @@ Agrupando com kmeans
 
 ```{r}
 set.seed(123)
-explorando_k = tibble(k = 3:15) %>% 
+explorando_k = tibble(k = 1:15) %>% 
     group_by(k) %>% 
     do(
         kmeans(select(filmes_transformado, -title), 
@@ -90,12 +90,12 @@ explorando_k %>%
     geom_point()
 ```
 
-Usaremos k = 5
+Usaremos k = 6
 
 ```{r}
 filmes_km = filmes_transformado %>% 
     select(-title) %>% 
-    kmeans(centers = 5, nstart = 20)
+    kmeans(centers = 6, nstart = 20)
 
 filmes_transformado_agrupado = filmes_km %>% 
     augment(filmes_transformado)
@@ -117,12 +117,11 @@ filmes_km %>%
 
 Não deixe de dar uma olhada [nessa explicação visual sobre PCA](http://setosa.io/ev/principal-component-analysis/). 
 
-Encontrando so componentes:
+Encontrando os componentes:
 
 ```{r}
 filmes_pca = filmes_transformado %>% 
     column_to_rownames("title") %>% 
-    #select(-title) %>% 
     prcomp(scale = FALSE) 
 ```
 
@@ -171,7 +170,7 @@ au %>%
     geom_point(size = .7, alpha = .5)
 ```
 
-Tentando ver a estrutura de grupos
+Tentando ver a estrutura de grupos. Não conseguimos diferenciar muito o 
 
 ```{r}
 au %>% 
@@ -221,10 +220,11 @@ E com um método não linear?
 
 ```{r}
 require(Rtsne)
+set.seed(111)
 tsne.out = filmes_transformado %>% 
     select(-title) %>% 
     Rtsne(verbose = TRUE, 
-          perplexity = 30)
+          perplexity = 40) # você pode variar esse parâmetro. o autor recomenda entre 5-50
 
 df = as.data.frame(tsne.out$Y)
 filmes_tsne = cbind(au, df)
