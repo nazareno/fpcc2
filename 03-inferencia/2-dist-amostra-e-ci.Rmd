@@ -77,9 +77,9 @@ rbind(medias, medias_bootstrap) %>%
   geom_histogram(bins = 50, fill = "white") + 
   facet_grid(tipo ~ .) + 
   geom_vline(xintercept = mean(population$data), colour = "darkblue") + 
-  geom_text(aes(x = mean(population$data) + 10, y = 50, label = "Média da população"), colour = "darkblue") + 
-  geom_vline(xintercept = mean(amostra_no_experimento), colour = "red") + 
-  geom_text(aes(x = mean(amostra_no_experimento) -5, y = 55, label = "Média da amostra"), colour = "red")
+  #geom_text(aes(x = mean(population$data) + 10, y = 50, label = "Média da população"), colour = "darkblue") + 
+  geom_vline(xintercept = mean(amostra_no_experimento), colour = "red")  
+  #geom_text(aes(x = mean(amostra_no_experimento) -5, y = 55, label = "Média da amostra"), colour = "red")
   
 
 ```

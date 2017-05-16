@@ -53,7 +53,7 @@ Bootstrapping "na mão"
 ```{r}
 amostra = sample(lastfm$news, 200)
 
-repeticoes = 4000 # pelo menos 1000, mas mais não faz mal.
+repeticoes = 4000 # pelo menos 2000, mas mais não faz mal.
 
 exp_com_bootstrap <- function(x){
   boot_x <- sample(x, size = NROW(x), replace = TRUE) # aqui é o bootstrap

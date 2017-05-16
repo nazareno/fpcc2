@@ -1,19 +1,19 @@
 ---
-title: "Inferência parte 1"
+title: "Experimentos com a cobertura de ICs"
 author: "Nazareno"
-date: "2 de setembro de 2016"
 output: 
-  html_document:
+  html_notebook:
     theme: readable
     fig_width: 7
     toc: true
     toc_float: true
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(ggplot2)
-library(dplyr)
+library(tidyverse)
+library(resample) # para bootstrap
 theme_set(theme_bw())
 ```
 
@@ -21,7 +21,7 @@ Os dados
 
 ```{r}
 lastfm = read.csv("dados/experimento-lastfm.csv")
-str(lastfm)
+glimpse(lastfm)
 
 lastfm = select(lastfm, news, ecletic) %>% 
   filter(complete.cases(lastfm))
@@ -31,25 +31,86 @@ lastfm %>% ggplot(aes(ecletic)) + geom_histogram(binwidth = 100)
 ```
 
 ```{r}
-library(resample)
-
 onerun = function(dado, n) {
   experiment = sample(dado, n)
-  b = bootstrap(experiment, mean)
-  mean.news = CI.bca(b, probs = c(.025, .975))
-  mean.news
+  b = bootstrap(experiment, mean, R = 2000)
+  ci.from.bca = CI.bca(b, probs = c(.025, .975))
+  ci.from.percentile = CI.percentile(b, probs = c(.025, .975))
+  return(tibble(type = c("bca", "percentile"),
+                lower = c(ci.from.bca[1], ci.from.percentile[1]), 
+                upper = c(ci.from.bca[2], ci.from.percentile[2])))
 }
 
-cobertura = function(dado, n, reps = 1000){
-  r = replicate(reps, onerun(dado, n))
-  answer = c()
-  for(i in seq_along(length(r))){
-    lower = r[1], 
-                                         upper = interval[2]
-  }
+cobertura = function(dado, sample_size, experiments = 2000){
+  cis = tibble(experimento = 1:experiments) %>% 
+    group_by(experimento) %>% 
+    do(onerun(dado, sample_size))
 }
+```
 
-c = cobertura(lastfm$news, 200, 100)
+## Uma variável menos skewed
+
+```{r}
+set.seed(123)
+
+data = lastfm$ecletic
+
+experimento_cobertura = cobertura(data, 
+                                  sample_size = 200, 
+                                  experiments = 100)
+
+cis_com_cobertura = experimento_cobertura %>% 
+  mutate(acertou = mean(data) <= upper & mean(data) >= lower)
+
+cis_com_cobertura %>% 
+  ggplot(aes(x = experimento, ymax = upper, ymin = lower, color = acertou)) + 
+  geom_hline(yintercept = mean(data)) + 
+  geom_errorbar() + 
+  facet_grid(. ~ type)
+
+experimento_cobertura_grande = cobertura(data, sample_size = 200, experiments = 1000)
+
+experimento_cobertura_grande %>% 
+  mutate(acertou = mean(data) < upper & mean(data) > lower) %>%
+  group_by(type, acertou) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = n / sum(n)) %>% 
+  ggplot(aes(x = acertou, y = prop)) + 
+  geom_col() + 
+  geom_hline(yintercept = 0.05) + 
+  facet_grid(. ~ type)
 
 ```
 
+## Para uma variável muito skewed: news
+
+```{r}
+set.seed(123)
+
+data = lastfm$news
+  
+experimento_cobertura = cobertura(data, 200, 100)
+
+cis_com_cobertura = experimento_cobertura %>% 
+  mutate(acertou = mean(data) < upper & mean(data) > lower)
+
+cis_com_cobertura %>% 
+  ggplot(aes(x = experimento, ymax = upper, ymin = lower, color = acertou)) + 
+  geom_hline(yintercept = mean(data)) + 
+  geom_errorbar() + 
+  facet_grid(. ~ type)
+
+
+experimento_cobertura_grande = cobertura(data, sample_size = 200, experiments = 1000)
+
+experimento_cobertura_grande %>% 
+  mutate(acertou = mean(data) < upper & mean(data) > lower) %>%
+  group_by(type, acertou) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = n / sum(n)) %>% 
+  ggplot(aes(x = acertou, y = prop)) + 
+  geom_col() + 
+  geom_hline(yintercept = 0.05) + 
+  facet_grid(. ~ type)
+
+```
