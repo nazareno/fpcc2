@@ -1,6 +1,8 @@
 ---
 title: "Dicas de EDA para gastos da câmara"
 output: html_notebook
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r}
