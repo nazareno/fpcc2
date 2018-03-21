@@ -63,5 +63,5 @@ A forma mais segura e portável de você escrever seus artigos, relatórios, etc
 
 Para fazer seu documento usando latex, provavelmente a solução com menos configuração e mais facilidade de compartilhar depois que você encontrará é o [overleaf](https://www.overleaf.com). Depois de logar, procure um modelo/formato da ACM ou IEEE de duas colunas (por exemplo, o _Association for Computing Machinery (ACM) - SIG conference proceedings Template_) e o restante será intuitivo.
 
-Outra possibilidade mais recente que ainda não explorei muito mas parece bem interessante é escrever o artigo direto em Markdown ou RMarkdown. Há um pacote do pessoal do RStudio para isso, o [rstudio](https://github.com/rstudio/rticles).
+Outra possibilidade mais recente que ainda não explorei muito mas parece bem interessante é escrever o artigo direto em Markdown ou RMarkdown. Há um pacote do pessoal do RStudio para isso, o [rticles](https://github.com/rstudio/rticles).
 
