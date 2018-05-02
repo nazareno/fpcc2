@@ -20,7 +20,10 @@ theme_set(theme_bw())
 Os dados
 
 ```{r}
-lastfm = read.csv("dados/experimento-lastfm.csv")
+lastfm = read_csv(here("dados/experimento-lastfm.csv"), 
+                  col_types = cols(.default = col_double(), 
+                                   user = col_character()))
+
 glimpse(lastfm)
 
 lastfm = select(lastfm, news, ecletic) %>% 

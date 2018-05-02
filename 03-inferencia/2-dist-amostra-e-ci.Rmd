@@ -21,7 +21,7 @@ population %>%
   geom_vline(xintercept = mean(population$data), colour = "darkblue") + 
   geom_text(aes(x = mean(data) + 30, y = 1500, label = "Média"))
 
-
+mean(population$data)
 ```
 
 ## A distribuição amostral da média
@@ -50,6 +50,7 @@ medias %>%
 ```{r}
 set.seed(123)
 amostra_no_experimento = sample(population$data, n)
+mean(amostra_no_experimento)
 
 medias %>% 
   ggplot(aes(x = media)) + 
@@ -67,7 +68,9 @@ medias %>%
 set.seed(123)
 medias_bootstrap = tibble(i = 1:2000) %>% 
   group_by(i) %>% 
-  do(tibble(media = mean(sample(amostra_no_experimento, NROW(amostra_no_experimento), replace = TRUE)))) %>% 
+  do(tibble(media = mean(sample(amostra_no_experimento, 
+                                NROW(amostra_no_experimento), 
+                                replace = TRUE)))) %>% 
   ungroup()
   
 medias_bootstrap$tipo = "Dist. bootstrap"

@@ -1,7 +1,6 @@
 ---
 title: "Inferência parte 1"
 author: "Nazareno"
-date: "2 de setembro de 2016"
 output: 
   html_notebook:
     theme: readable
@@ -16,13 +15,16 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(GGally)
+library(here)
 theme_set(theme_bw())
 ```
 
-Os dados
+## Os dados
 
 ```{r}
-lastfm = read.csv("dados/experimento-lastfm.csv")
+lastfm = read_csv(here("dados/experimento-lastfm.csv"), 
+                  col_types = cols(.default = col_double(), 
+                                   user = col_character()))
 glimpse(lastfm)
 
 lastfm = select(lastfm, news, ecletic)
@@ -31,59 +33,179 @@ lastfm %>% ggplot(aes(news)) + geom_histogram(binwidth = 10)
 lastfm %>% ggplot(aes(ecletic)) + geom_histogram(binwidth = 100)
 ```
 
+## Amostra e visões a partir dela
+
+Imagine por agora que os dados que temos do Last.fm são completos. Que são a população inteira de usuários. Como seria nossa visão dos dados se tivéssemos apenas uma amostra dos dados? `sample(x, n)` faz uma amostra aleatórioa de `n` elementos tirados do vetor `x`:
+
+Se calcularmos a média do números de novos artistas escutados para três amostras de 100 elementos, teremos 3 resultados diferentes:
+
 ```{r}
 sample(lastfm$news, 100) %>% mean()
-
-# Média de num_samples amostras com n = sample_size
-dist_original = lastfm$news
-sample_size <- 100
-num_samples <- 2000
-
-samples_means <- c()
-for(i in seq(1, num_samples)){
-  a_sample <- sample(dist_original, sample_size)
-  samples_means[i] <- mean(a_sample)
-}
-ggplot(data.frame(samples_means), aes(samples_means)) + geom_histogram(binwidth = .5) + 
-  geom_vline(xintercept = mean(dist_original))
+sample(lastfm$news, 100) %>% mean()
+sample(lastfm$news, 100) %>% mean()
 ```
 
-Bootstrapping "na mão"
+Se fizermos isso muitas vezes podemos ver como essa variação acontece. A distribuição dos valores de uma estatística em diferentes amostras de uma população se chama **distribuição amostral** da estatística.
 
 ```{r}
-amostra = sample(lastfm$news, 200)
+set.seed(1)
+
+amostras = data.frame(amostra = 1:1000) %>% # faremos 1000 vezes
+  mutate(media = map_dbl(amostra, ~ lastfm %>% 
+                                      pull(news) %>% 
+                                      sample(100) %>% 
+                                      mean()))
+
+amostras
+
+amostras %>% 
+  ggplot(aes(media)) + 
+  geom_histogram(binwidth = .5, fill = "white", colour = "darkgrey") + 
+  geom_vline(xintercept = mean(lastfm$news)) # média calculada com todos os dados
+```
+
+E se o tamanho da amostra (*n*) fosse muito menor?
+
+```{r}
+amostras = data.frame(amostra = 1:1000) %>% # faremos 1000 vezes
+  mutate(media = map_dbl(amostra, ~ lastfm %>% 
+                                      pull(news) %>% 
+                                      sample(10) %>% 
+                                      mean()))
+
+amostras
+
+amostras %>% 
+  ggplot(aes(media)) + 
+  geom_histogram(binwidth = .5, fill = "white", colour = "darkgrey") + 
+  geom_vline(xintercept = mean(lastfm$news)) # média calculada com todos os dados
+
+```
+
+A mesma lógica vale para outras estatísticas além da média. O código abaixo analisa a distribuição dos valores observados em amostras a partir das quais calculamos a _mediana_. Altere o código para usar outra estatística: (dica: max e min não funcionam.) 
+
+```{r}
+amostras = data.frame(amostra = 1:1000) %>% # faremos 1000 vezes
+  mutate(estatistica = map_dbl(amostra, ~ lastfm %>% 
+                                      pull(news) %>% 
+                                      sample(100) %>% 
+                                      median()))
+
+amostras
+
+amostras %>% 
+  ggplot(aes(estatistica)) + 
+  geom_histogram(binwidth = .5, fill = "white", colour = "darkgrey") + 
+  geom_vline(xintercept = median(lastfm$news)) # média calculada com todos os dados
+```
+
+## Distribuição amostral
+
+A distribuição dos valores de uma estatística a partir de amostras é chamada de *distribuição amostral* daquela estatística. Ela tem um papel importante, porque é a partir do entendimento dela que estimaremos quanta confiança temos em uma estatística que estamos calculando a partir de uma amostra.
+
+O principal a entender aqui é que se conhecermos a distribuição amostral, saberemos quão longe normalmente a estatística calculada para uma amostra está daquela calculada para a população. Sabendo isso, podemos calcular uma margem de erro para a estimativa feita a partir da amostra.
+
+## A situação mais comum na vida real
+
+Normalmente temos *uma amostra* da população apenas. Daí não conhecemos a distribuição amostral. Mas gostaríamos de a partir da nossa amostra estimar onde está a estatística para a população. 
+
+Exemplo: queremos estimar qual a proporção de pessoas que gostará do produto (a estatística) entre todos os usuários (a população) a partir do cálculo da proporção de pessoas que gostou do produto (a mesma estatística) em um teste com 100 pessoas (a amostra).
+
+Repare que se conhecermos como a estatística varia na distribuição amostral (ex: 2 pontos pra mais ou pra menos cobrem 99% dos casos) e temos a estatística calculada para a amostra, poderíamos estimar uma faixa de valores onde achamos que a estatística está para a população _com 99% de confiança_.
+
+### A ideia central que usaremos
+
+Não temos a população, para estimar a variação na distribuição amostral. A ideia principal que usaremos, em uma técnica chamada *boostrapping* é que _usar a amostra como substituto da população e simular a amostragem através de reamostragem com reposição fornece uma estimativa precisa da variação na distribuição amostral_. 
+
+Pegando por partes: 
+
+ * Consideramos a amostra $A$ que tem tamanho $n$ como sendo um substituto da população  
+ * Repetimos $b$ vezes o seguinte processo: criamos uma amostra de tamanho $n$ obtendo elementos aleatoriamente de $A$, repondo cada elemento depois de cada sorteio. 
+ * Calculamos a estatística $e$ que nos interessa (média, mediana, desvio padrão, o que for) para cada uma das $b$ amostras. 
+ 
+Como resultado, sabemos como a estatística $e$ varia em uma simulação de $b$ amostragens. 
+
+A partir dessa informação, podemos estimar quão longe no máximo a estatística $e_a$ que calculamos para nossa amostra está da estatística $e_p$ para a população. Isso porque se sabemos normalmente quão longe $e_a$ está de $e_p$ (que é o que estimamos com o boostrap), sabemos também o inverso. 
+
+Assim, se estimamos que em 99% das amostras, $e_a$ está a +/- 10 unidades de $e_p$, e calculamos que $e_a = 22$, podemos estimar que _com 99% de confiança_ $e_p$ está em $e_a +/ - 10 = [12, 32]$. 
+
+### Aplicando bootstrapping 
+
+A partir dessa informação, podemos estimar quão longe no máximo a estatística $e_a$ que calculamos para nossa amostra está da estatística $e_p$ para a população. Isso porque se sabemos normalmente quão longe $e_a$ está de $e_p$ (que é o que estimamos com o boostrap), sabemos também o inverso. 
+
+Assim, se estimamos que em 99% das amostras, $e_a$ está a +/- 10 unidades de $e_p$, e calculamos que $e_a = 22$, podemos estimar que _com 99% de confiança, $e_p$ está em $e_a +/ - 10 = [12, 32]$. 
+
+### Aplicando bootstrapping 
+
+```{r}
+amostra = lastfm %>%  
+  sample_n(200) %>% 
+  pull(news)
+
+media_amostra = mean(amostra)
 
 repeticoes = 4000 # pelo menos 2000, mas mais não faz mal.
 
 exp_com_bootstrap <- function(x){
-  boot_x <- sample(x, size = NROW(x), replace = TRUE) # aqui é o bootstrap
-  return(sd(boot_x))
+  boot_x <- sample(x,
+                   size = NROW(x), 
+                   replace = TRUE) # aqui é o bootstrap
+  return(mean(boot_x))
 }
 
+# Agora o input das reamostragens é a amostra!
 experimentos = data_frame(i = 1:repeticoes) %>% 
-  rowwise() %>% 
-  mutate(media_exp = exp_com_bootstrap(amostra))
+    rowwise() %>% 
+    mutate(media_exp = exp_com_bootstrap(amostra)) %>%  # <- Aqui!
+    ungroup() 
 
 ggplot(experimentos, aes(x = media_exp)) + 
   geom_histogram(binwidth = 1, colour = "darkorange", fill = "white")
 summary(experimentos)
+```
 
+Calculando o IC:
+
+```{r}
 # IC com 90%: 
 alpha = .1
 quantile(experimentos$media_exp, 
          probs = c(.05, .95))
-ci = quantile(experimentos$media_exp, probs = c(alpha/2, 1 - alpha/2))
+
+cis = experimentos %>% 
+    mutate(diferenca = media_exp - media_amostra) %>% 
+    summarise(l = quantile(diferenca, alpha/2), 
+              u = quantile(diferenca, 1 - alpha/2)) %>% 
+    mutate(ci_lower = media_amostra - u, 
+           ci_upper = media_amostra - l)
 
 ggplot(experimentos, aes(x = media_exp)) + 
   geom_histogram(binwidth = 1, colour = "darkorange", fill = "white") + 
-  geom_vline(aes(xintercept = ci[[1]]), colour = "blue") + 
-  geom_vline(aes(xintercept = ci[[2]]), colour = "blue") + 
-  geom_vline(aes(xintercept = sd(lastfm$news)), colour = "green")
-
-# IC com 95%: 
-alpha = .05
-ci = quantile(experimentos$media_exp, 
-              probs = c(alpha/2, 1 - alpha/2))
+  geom_vline(aes(xintercept = cis$ci_lower), colour = "blue", size = 1.5) + 
+  geom_vline(aes(xintercept = cis$ci_upper), colour = "blue", size = 1.5) + 
+  geom_vline(aes(xintercept = media_amostra), colour = "green") + 
+    geom_vline(aes(xintercept = mean(lastfm$news)), colour = "red")
 ```
 
+Com outro nível de confiança:
+
+```{r}
+# IC com 95%: 
+alpha2 = .05
+cis2 = experimentos %>% 
+    mutate(diferenca = media_exp - media_amostra) %>% 
+    summarise(l = quantile(diferenca, alpha2/2), 
+              u = quantile(diferenca, 1 - alpha2/2)) %>% 
+    mutate(ci_lower = media_amostra - u, 
+           ci_upper = media_amostra - l)
+
+ggplot(experimentos, aes(x = media_exp)) + 
+  geom_histogram(binwidth = 1, colour = "pink", fill = "white") + 
+    geom_vline(aes(xintercept = cis$ci_lower), colour = "blue") + 
+  geom_vline(aes(xintercept = cis$ci_upper), colour = "blue") + 
+  geom_vline(aes(xintercept = cis2$ci_lower), colour = "purple", size = 2) + 
+  geom_vline(aes(xintercept = cis2$ci_upper), colour = "purple", size = 2) + 
+  geom_vline(aes(xintercept = media_amostra), colour = "green")
+
+```
 
