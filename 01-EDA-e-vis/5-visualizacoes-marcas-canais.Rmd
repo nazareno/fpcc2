@@ -5,8 +5,9 @@ editor_options:
   chunk_output_type: inline
 ---
 
-```{r}
-library(tidyverse, warn.conflicts = F)
+```{r setup, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(here)
 theme_set(theme_bw())
 ```
 
@@ -32,43 +33,190 @@ dados = dados %>%
 glimpse(dados)
 ```
 
-## Um valor
+## Marcas e canais
+
+Para uma mesma marca, por exemplo pontos (que na verdade são círculos), temos que escolher como codificar variáveis nos canais disponíveis. 
+
+### Canais em pontos
+
+Como exemplo, usamos três variáveis nos gráficos abaixo: curso, número de projetos de pesquisa e confiança no uso de estatística. A marca usada é sempre pontos, e os canais são posição horizontal, posição vertical, tamanho e cor do ponto:
+
+```{r}
+dados %>%
+  ggplot(
+    aes(
+      x = "Alunos",
+      y = projetos_de_pesquisa,
+      size = confianca_estatistica,
+      colour = curso
+    )
+  ) +
+  geom_jitter(width = .1, alpha = .5)
+
+
+dados %>%
+  ggplot(
+    aes(
+      x = curso,
+      y = projetos_de_pesquisa,
+      size = confianca_estatistica,
+      colour = curso
+    )
+  ) +
+  geom_jitter(width = .2, alpha = .5)
+
+dados %>%
+  ggplot(
+    aes(
+      x = curso,
+      y = confianca_estatistica,
+      size = projetos_de_pesquisa,
+      colour = curso
+    )
+  ) +
+  geom_jitter(width = .2, alpha = .5)
+
+
+dados %>%
+  ggplot(
+    aes(
+      x = curso,
+      y = confianca_estatistica,
+      colour = projetos_de_pesquisa
+    )
+  ) +
+  geom_jitter(width = .2, alpha = .5, size = 3)
+
+dados %>%
+  ggplot(
+    aes(
+      x = projetos_de_pesquisa,
+      y = confianca_estatistica,
+      colour = curso
+    )
+  ) +
+  geom_jitter(width = .2, alpha = .5, size = 3)
+
+dados %>%
+  ggplot(
+    aes(
+      x = projetos_de_pesquisa,
+      y = confianca_estatistica,
+      colour = curso
+    )
+  ) +
+  geom_count(alpha = .5)
+
+```
+
+Quais tarefas de descrição de distribuição de valores e de comparação de valores ou sumários são mais fáceis em cada visualização? 
+
+### Canais em barras
+
+A mesma lógica vale para outras marcas. Por exemplo, 
+
+```{r}
+dados %>%
+  ggplot(
+    aes(
+      x = curso,
+      fill = fpcc2
+    )
+  ) +
+  geom_bar() +
+  coord_flip()
+
+dados %>%
+  ggplot(
+    aes(
+      x = fpcc2,
+      fill = curso
+    )
+  ) +
+  geom_bar() +
+  coord_flip()
+
+dados %>%
+  ggplot(
+    aes(
+      x = curso,
+      fill = fpcc2
+    )
+  ) +
+  geom_bar(position = "dodge") +
+  coord_flip()
+
+dados %>%
+  ggplot(
+    aes(
+      x = fpcc2,
+      fill = curso
+    )
+  ) +
+  geom_bar(position = "dodge") +
+  coord_flip()
+
+dados %>%
+  ggplot(
+    aes(
+      x = fpcc2
+    )
+  ) +
+  geom_bar(position = "dodge") +
+  facet_wrap(~ curso) + 
+  coord_flip()
+
+
+```
+
+## Algumas escolhas comuns
+
+### Um valor
 
 ```{r}
 dados %>% 
   ggplot(aes(x = "Alunos", y = altura)) + 
   geom_point(size = 2, alpha = .6)
+
+dados %>% 
+  ggplot(aes(x = "Alunos", y = altura)) + 
+  geom_jitter(, width = .1, size = 2, alpha = .6)
 ```
 
-## Uma chave, um valor
+### Contando frequências em uma variável categórica
 
 ```{r}
 dados %>% 
-  ggplot(aes(x = curso, y = projetos_de_pesquisa)) + 
-  #geom_jitter(width = .05, height = 0, alpha = .6)
-  geom_count()
+  ggplot(aes(x = curso)) + 
+  geom_bar(fill = "salmon", colour = "darkred", width = .2)
 
 dados %>% 
-  ggplot(aes(x = curso)) + 
-  geom_bar()
-
+  count(curso) %>% 
+  ggplot(aes(x = curso, y = n)) + 
+  geom_point(size = 6, colour = "salmon") + 
+  ylim(0, 80)
 ```
 
-## 2 chaves
+Compare a facilidade para comparar valores nas visualizações acima e nessas:
+
+```{r}
+dados %>% 
+  ggplot(aes(x = curso, y = "")) + 
+  geom_count(colour = "blue") + 
+  ylab("")
+```
+
+### Frequência ou outro valor para duas variáveis categóricas
 
 ```{r}
 dados %>% 
   ggplot(aes(x = curso, y = fpcc2)) + 
   geom_count()
 
-dados %>% 
-  ggplot(aes(x = curso, y = fpcc2, fill = confianca_estatistica)) + 
-  geom_tile()
-
 confiancas = dados %>% 
   group_by(curso, fpcc2) %>% 
   summarise(confianca_estatistica = mean(confianca_estatistica)) %>% 
-  mutate(fpcc2 = factor(fpcc2, 
+  mutate(fpcc2 = factor(fpcc2, # essa parte é para forçar a ordem que queremos nos valores
                            levels = c("Já cursei", 
                                       "Estou cursando em 2017", 
                                       "Estou cursando em 2016", 
@@ -87,25 +235,29 @@ confiancas %>%
   ggplot(aes(x = curso, 
              y = confianca_estatistica)) + 
   geom_col() + 
-  facet_grid(. ~ fpcc2)
+  facet_grid(. ~ fpcc2) + 
+  coord_flip()
 
 confiancas %>%
   ggplot(aes(x = fpcc2, 
              y = confianca_estatistica)) + 
   geom_col() + 
-  facet_grid(. ~ curso)
+  facet_grid(. ~ curso) + 
+  coord_flip()
 
 confiancas %>%
   ggplot(aes(x = fpcc2, 
              y = confianca_estatistica, 
              fill = curso)) + 
-  geom_col(position = "dodge") 
+  geom_col(position = "dodge") + 
+  coord_flip()
 
 confiancas %>%
   ggplot(aes(x = fpcc2, 
              y = confianca_estatistica, 
              colour = curso)) + 
-  geom_point(size = 3, alpha = .7) 
+  geom_point(size = 3, alpha = .7) + 
+  coord_flip()
 
 ```
 
@@ -138,18 +290,29 @@ github = ler_github_wide("dados/atividade-no-github-archive-2012-2015.csv")
 glimpse(github)
 ```
 
+Linguagens que tem mais de um tipo de evento (por repositório), tem mais de outro? 
+
 ```{r}
 github %>% 
   ggplot(aes(x = ForkEvent, y = PushEvent)) + 
   geom_point()
 
 github %>% 
-  ggplot(aes(x = IssuesEvent, y = PushEvent, label = repository_language)) + 
-  geom_point() +
-  #geom_text() + 
-  geom_abline(slope = 1, intercept = 0, colour = "blue") + 
-  geom_abline(slope = 2, intercept = 0, colour = "darkblue") 
+  ggplot(aes(x = ForkEvent, y = PushEvent)) + 
+  geom_point() + 
+  geom_abline() + 
+  lims(x = c(0, 12), y = c(0,12))
 ```
+
+```{r}
+github %>% 
+  ggplot(aes(x = IssuesEvent, y = PushEvent, label = repository_language)) + 
+  geom_point(alpha = .5) +  
+  # geom_text() +
+  geom_abline(slope = 1, intercept = 0, colour = "blue")  
+  # geom_abline(slope = 2, intercept = 0, colour = "darkblue") 
+```
+
 
 ## Series temporais
 
