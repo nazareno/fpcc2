@@ -66,7 +66,7 @@ sw4x5 = sw %>%
 
 # Nosso framework
 
-## Manual
+## Modo manual
 
 ```{r}
 medias1x4 = sw1x4 %>% 
@@ -75,15 +75,17 @@ medias1x4 = sw1x4 %>%
 
 medias1x4
 
-diff.media.observada.1x4 = diff(medias1x4$media)
-
 medias4x5 = sw4x5 %>% 
   group_by(title) %>% 
   summarise(media = mean(rating))
 
 medias4x5
 
+diff.media.observada.1x4 = diff(medias1x4$media)
 diff.media.observada.4x5 = diff(medias4x5$media)
+
+sprintf("Diferença observada nas amostras entre ep 1 e 4: %s", diff.media.observada.1x4)
+sprintf("Diferença observada nas amostras entre ep 4 e 5: %s", diff.media.observada.4x5)
 ```
 
 Episódio 1 x 4
@@ -91,6 +93,7 @@ Episódio 1 x 4
 ```{r}
 set.seed(1)
 glimpse(sw1x4)
+
 diffs = replicate(10000, {
   medias = sw1x4 %>% 
     mutate(id_embaralhado = sample(title, n())) %>% 
@@ -143,7 +146,10 @@ sum(abs(diffs) > abs(diff.media.observada.4x5)) / length(diffs)
 ```{r}
 library(resample)
 
-permutationTest2(sw1x4, mean(rating), treatment = title)
+permutationTest2(sw1x4, 
+                 mean(rating), 
+                 treatment = title)
+
 permutationTest2(sw4x5, mean(rating), treatment = title)
 
 permutationTest2(sw1x4, median(rating), treatment = title)
@@ -201,6 +207,8 @@ wilcox_test(rating ~ as.factor(title),
 
 ## Chi-squared para associação entre duas variávies categóricas
 
+Quando os resíduos do teste chi-quadrado para a associação entre duas categorias for maior que 3.84, rejeitamos a hipótese nula (de não associação) com p < .05.
+
 ```{r}
 titanic = read.csv("dados/titanic.csv")
 titanic = titanic %>% 
@@ -237,7 +245,7 @@ mosaicplot(t(titanicTable),
            ylab = "Relative frequency", main = "")
 
 library(vcd)
-mosaic(table(titanic2$survival, titanic2$sex))
+mosaic(survival ~ sex, data = titanic2)
 mosaic(HairEyeColor, shade = TRUE)
 chisq.test(titanic2$sex, titanic2$survival, simulate.p.value = TRUE)
 ```
